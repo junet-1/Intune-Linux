@@ -7,6 +7,8 @@ autoinstall:
     - curl
     - gnupg
     - wget
+    - gnome-keyring  # Für Intune Enrollment
+    - libsecret-1-0  # Keyring-Support
     
   snaps:
     - name: firefox
@@ -30,98 +32,75 @@ autoinstall:
     layout:
       name: direct
       
+  # KORRIGIERT: Für Ubuntu 24.04 den Standard-Kernel verwenden
   early-commands:
     - echo 'linux-generic' > /run/kernel-meta-package
     
   late-commands:
-    # Benutzer-Passwort-Änderung
+    # Prüfen ob User existiert und ggf. Passwort-Änderung
     - curtin in-target -- bash -c 'if id ubuntu >/dev/null 2>&1; then passwd -e ubuntu; fi'
     
     # Boot-Splash aktivieren
-    - curtin in-target -- sed -i /etc/default/grub -e 's/GRUB_CMDLINE_LINUX_DEFAULT=".*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/'
+    - >-
+      curtin in-target -- sed -i /etc/default/grub -e
+      's/GRUB_CMDLINE_LINUX_DEFAULT=".*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/'
     - curtin in-target -- update-grub
     
     # NetworkManager konfigurieren
     - rm -f /target/etc/netplan/00-installer-config*yaml
-    - curtin in-target -- bash -c 'echo "network:" > /etc/netplan/01-network-manager-all.yaml'
-    - curtin in-target -- bash -c 'echo "  version: 2" >> /etc/netplan/01-network-manager-all.yaml'
-    - curtin in-target -- bash -c 'echo "  renderer: NetworkManager" >> /etc/netplan/01-network-manager-all.yaml'
+    - >-
+      printf "network:\n  version: 2\n  renderer: NetworkManager"
+      > /target/etc/netplan/01-network-manager-all.yaml
       
-    # Microsoft GPG-Key installieren
+    # Microsoft GPG-Key richtig installieren
     - curtin in-target -- wget -qO /tmp/microsoft.asc https://packages.microsoft.com/keys/microsoft.asc
     - curtin in-target -- gpg --dearmor --output /usr/share/keyrings/microsoft.gpg /tmp/microsoft.asc
     - curtin in-target -- rm /tmp/microsoft.asc
     
-    # Microsoft Repositories hinzufügen
-    - curtin in-target -- bash -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
-    - curtin in-target -- bash -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-intune-portal.list'
+    # Edge Repository konfigurieren
+    - >-
+      curtin in-target -- bash -c 
+      'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
       
-    # Microsoft Pakete installieren
+    # Intune Portal Repository konfigurieren  
+    - >-
+      curtin in-target -- bash -c 
+      'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-intune-portal.list'
+      
+    # Repository-Updates und Microsoft-Pakete installieren
     - curtin in-target -- apt-get update || true
     - curtin in-target -- apt-get install -y microsoft-edge-stable || true
     - curtin in-target -- apt-get install -y intune-portal || true
     
-    # GNOME Keyring für Intune installieren (Fix für 4u3f8)
-    - curtin in-target -- apt-get install -y gnome-keyring libpam-gnome-keyring || true
-    
-    # PAM für Keyring konfigurieren
-    - curtin in-target -- cp /etc/pam.d/common-auth /etc/pam.d/common-auth.backup || true
-    - curtin in-target -- cp /etc/pam.d/common-session /etc/pam.d/common-session.backup || true
-    - curtin in-target -- bash -c 'if ! grep -q "pam_gnome_keyring" /etc/pam.d/common-auth; then echo "auth    optional        pam_gnome_keyring.so" >> /etc/pam.d/common-auth; fi'
-    - curtin in-target -- bash -c 'if ! grep -q "pam_gnome_keyring" /etc/pam.d/common-session; then echo "session optional        pam_gnome_keyring.so auto_start" >> /etc/pam.d/common-session; fi'
-    
-    # Keyring-Verzeichnis für ubuntu-Benutzer erstellen
-    - curtin in-target -- mkdir -p /home/ubuntu/.local/share/keyrings
-    - curtin in-target -- chown -R ubuntu:ubuntu /home/ubuntu/.local/share/keyrings
-    - curtin in-target -- chmod 700 /home/ubuntu/.local/share/keyrings
-    
-    # Standard-Keyring erstellen
-    - curtin in-target -- bash -c 'echo "[keyring]" > /home/ubuntu/.local/share/keyrings/default'
-    - curtin in-target -- bash -c 'echo "display-name=Standard" >> /home/ubuntu/.local/share/keyrings/default'
-    - curtin in-target -- bash -c 'echo "ctime=1625097600" >> /home/ubuntu/.local/share/keyrings/default'
-    - curtin in-target -- bash -c 'echo "mtime=1625097600" >> /home/ubuntu/.local/share/keyrings/default'
-    - curtin in-target -- bash -c 'echo "lock-on-idle=false" >> /home/ubuntu/.local/share/keyrings/default'
-    - curtin in-target -- bash -c 'echo "lock-after=false" >> /home/ubuntu/.local/share/keyrings/default'
-    - curtin in-target -- chown ubuntu:ubuntu /home/ubuntu/.local/share/keyrings/default
-    - curtin in-target -- chmod 600 /home/ubuntu/.local/share/keyrings/default
-    
-    # Keyring Autostart konfigurieren
-    - curtin in-target -- mkdir -p /home/ubuntu/.config/autostart
-    - curtin in-target -- bash -c 'echo "[Desktop Entry]" > /home/ubuntu/.config/autostart/gnome-keyring.desktop'
-    - curtin in-target -- bash -c 'echo "Type=Application" >> /home/ubuntu/.config/autostart/gnome-keyring.desktop'
-    - curtin in-target -- bash -c 'echo "Name=GNOME Keyring" >> /home/ubuntu/.config/autostart/gnome-keyring.desktop'
-    - curtin in-target -- bash -c 'echo "Exec=/usr/bin/gnome-keyring-daemon --start --components=secrets,ssh" >> /home/ubuntu/.config/autostart/gnome-keyring.desktop'
-    - curtin in-target -- bash -c 'echo "OnlyShowIn=GNOME;Unity;MATE;Xfce;LXDE;" >> /home/ubuntu/.config/autostart/gnome-keyring.desktop'
-    - curtin in-target -- bash -c 'echo "NoDisplay=true" >> /home/ubuntu/.config/autostart/gnome-keyring.desktop'
-    - curtin in-target -- chown -R ubuntu:ubuntu /home/ubuntu/.config
-    - curtin in-target -- chmod 755 /home/ubuntu/.config/autostart
-    - curtin in-target -- chmod 644 /home/ubuntu/.config/autostart/gnome-keyring.desktop
-    
-    # SSO Dependencies installieren
-    - curtin in-target -- apt-get install -y openjdk-11-jre libicu70 libjavascriptcoregtk-4.0-18 libwebkit2gtk-4.0-37 || true
-    - curtin in-target -- apt-get install -y default-jre libicu-dev || true
-    
-    # Microsoft Identity Broker installieren
-    - curtin in-target -- apt-get install -y microsoft-identity-broker || true
-    
-    # PAM für SSO konfigurieren
-    - curtin in-target -- bash -c 'if ! grep -q "pam_broker" /etc/pam.d/common-auth; then echo "auth    sufficient      pam_broker.so" >> /etc/pam.d/common-auth; fi'
-    - curtin in-target -- bash -c 'if ! grep -q "pam_broker" /etc/pam.d/common-session; then echo "session optional        pam_broker.so" >> /etc/pam.d/common-session; fi'
-    - curtin in-target -- bash -c 'if ! grep -q "pam_mkhomedir" /etc/pam.d/common-session; then echo "session optional        pam_mkhomedir.so skel=/etc/skel umask=077" >> /etc/pam.d/common-session; fi'
-    
-    # NSS für SSO konfigurieren
-    - curtin in-target -- sed -i 's/passwd:.*compat/& broker/' /etc/nsswitch.conf || true
-    - curtin in-target -- sed -i 's/group:.*compat/& broker/' /etc/nsswitch.conf || true
-    
-    # authd für Ubuntu 24.04
-    - curtin in-target -- apt-get install -y authd || true
-    
-    # Services aktivieren
-    - curtin in-target -- systemctl enable microsoft-identity-broker || true
-    
     # Server-Pakete entfernen
-    - curtin in-target -- apt-get remove -y btrfs-progs cryptsetup* lvm2 xfsprogs ubuntu-server ubuntu-server-minimal || true
+    - >-
+      curtin in-target -- apt-get remove -y
+      btrfs-progs cryptsetup* lvm2 xfsprogs
+      ubuntu-server ubuntu-server-minimal
       
-    # Cloud-init behalten und aufräumen
+    # Cloud-init behalten
     - curtin in-target -- apt-get install -y cloud-init
     - curtin in-target -- apt-get autoremove -y
+    
+    # Keyring für Intune konfigurieren
+    - curtin in-target -- systemctl enable gnome-keyring-daemon
+    
+    # Intune-Vorbereitung: Post-Boot-Script erstellen
+    - >-
+      curtin in-target -- bash -c 'cat > /home/ubuntu/setup-intune.sh << EOF
+      #!/bin/bash
+      # Keyring für Intune Enrollment vorbereiten
+      export GNOME_KEYRING_CONTROL=/run/user/\$UID/keyring
+      export SSH_AUTH_SOCK=/run/user/\$UID/keyring/ssh
+      
+      # Keyring starten falls nicht aktiv
+      if ! pgrep -x gnome-keyring-daemon >/dev/null; then
+          gnome-keyring-daemon --start --components=secrets
+      fi
+      
+      # Intune Portal starten
+      echo "Keyring konfiguriert. Intune Portal kann jetzt gestartet werden."
+      echo "Führe aus: intune-portal"
+      EOF'
+    - curtin in-target -- chmod +x /home/ubuntu/setup-intune.sh
+    - curtin in-target -- chown ubuntu:ubuntu /home/ubuntu/setup-intune.sh

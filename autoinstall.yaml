@@ -79,3 +79,35 @@ autoinstall:
     # Cloud-init behalten
     - curtin in-target -- apt-get install -y cloud-init
     - curtin in-target -- apt-get autoremove -y
+    
+    # Ubuntu SSO Setup für Microsoft Entra ID
+    - curtin in-target -- bash -c 'LOG_FILE="/var/log/ubuntu-sso-setup.log"'
+    - curtin in-target -- bash -c 'log() { echo "$(date "+%Y-%m-%d %H:%M:%S") - $1" | tee -a "$LOG_FILE"; }'
+    - curtin in-target -- bash -c 'log "SSO Setup gestartet"'
+    
+    # Dependencies für SSO installieren
+    - curtin in-target -- apt-get update
+    - curtin in-target -- apt-get install -y openjdk-11-jre libicu70 libjavascriptcoregtk-4.0-18 libwebkit2gtk-4.0-37 || true
+    - curtin in-target -- apt-get install -y default-jre libicu-dev || true
+    
+    # Microsoft Identity Broker installieren
+    - curtin in-target -- apt-get install -y microsoft-identity-broker || true
+    
+    # PAM-Konfiguration für SSO
+    - curtin in-target -- cp /etc/pam.d/common-auth /etc/pam.d/common-auth.backup
+    - curtin in-target -- cp /etc/pam.d/common-session /etc/pam.d/common-session.backup
+    
+    # PAM-Module hinzufügen
+    - curtin in-target -- bash -c 'if ! grep -q "pam_broker" /etc/pam.d/common-auth; then echo "auth    sufficient      pam_broker.so" >> /etc/pam.d/common-auth; fi'
+    - curtin in-target -- bash -c 'if ! grep -q "pam_broker" /etc/pam.d/common-session; then echo "session optional        pam_broker.so" >> /etc/pam.d/common-session; fi'
+    - curtin in-target -- bash -c 'if ! grep -q "pam_mkhomedir" /etc/pam.d/common-session; then echo "session optional        pam_mkhomedir.so skel=/etc/skel umask=077" >> /etc/pam.d/common-session; fi'
+    
+    # NSS-Konfiguration
+    - curtin in-target -- sed -i 's/passwd:.*compat/& broker/' /etc/nsswitch.conf
+    - curtin in-target -- sed -i 's/group:.*compat/& broker/' /etc/nsswitch.conf
+    
+    # Services aktivieren
+    - curtin in-target -- systemctl enable microsoft-identity-broker || true
+    
+    # authd für Ubuntu 24.04
+    - curtin in-target -- apt-get install -y authd || true

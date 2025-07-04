@@ -18,7 +18,7 @@ autoinstall:
   identity:
     realname: 'Ubuntu User'
     username: ubuntu
-    password: "$6$/EJRTPAuFLF6UCDQ$hoJf/WCXALcxXLHuc4cqyryVFH10nAgmsZiXbR4w.DoApeiCklhhkrduphh.aifM6EVtxh6AeewOenEFAh.YO0"
+    password: "$6$/EJRTPAuFLF6UCDQ$hoJf/...OH.YO0"
     hostname: ubuntu-desktop
     
   locale: de_DE.UTF-8
@@ -30,7 +30,7 @@ autoinstall:
     layout:
       name: direct
       
-  # KORRIGIERT: Für Ubuntu 24.04 den Standard-Kernel verwenden
+  # Für Ubuntu 24.04 den Standard-Kernel verwenden
   early-commands:
     - echo 'linux-generic' > /run/kernel-meta-package
     
@@ -65,49 +65,139 @@ autoinstall:
       curtin in-target -- bash -c 
       'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-intune-portal.list'
       
-    # Repository-Updates und Microsoft-Pakete installieren
-    - curtin in-target -- apt-get update || true
-    - curtin in-target -- apt-get install -y microsoft-edge-stable || true
-    - curtin in-target -- apt-get install -y intune-portal || true
-    
+    # SSO Setup Script erstellen
+    - >-
+      curtin in-target -- bash -c 'cat > /root/ubuntu-sso-setup.sh << "EOF"
+      #!/bin/bash
+      
+      # Ubuntu SSO Setup für Microsoft Entra ID
+      set -e
+      
+      LOG_FILE="/var/log/ubuntu-sso-setup.log"
+      
+      log() {
+          echo "$(date "+%Y-%m-%d %H:%M:%S") - $1" | tee -a "$LOG_FILE"
+      }
+      
+      log "SSO Setup gestartet"
+      
+      # Repository-Updates und Microsoft-Pakete installieren
+      log "Installiere Microsoft-Pakete..."
+      apt-get update >/dev/null 2>&1 || true
+      DEBIAN_FRONTEND=noninteractive apt-get install -y microsoft-edge-stable || true
+      DEBIAN_FRONTEND=noninteractive apt-get install -y intune-portal || true
+      
+      # Dependencies installieren
+      log "Installiere SSO Dependencies..."
+      DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-11-jre libicu70 libjavascriptcoregtk-4.0-18 libwebkit2gtk-4.0-37 >/dev/null 2>&1 || {
+          DEBIAN_FRONTEND=noninteractive apt-get install -y default-jre libicu-dev >/dev/null 2>&1 || true
+      }
+      
+      # Microsoft Identity Broker installieren
+      log "Installiere Microsoft Identity Broker..."
+      if ! DEBIAN_FRONTEND=noninteractive apt-get install -y microsoft-identity-broker >/dev/null 2>&1; then
+          log "WARNUNG: Microsoft Identity Broker Installation fehlgeschlagen"
+      fi
+      
+      # PAM-Konfiguration für SSO
+      log "Konfiguriere PAM für SSO..."
+      cp /etc/pam.d/common-auth /etc/pam.d/common-auth.backup 2>/dev/null || true
+      cp /etc/pam.d/common-session /etc/pam.d/common-session.backup 2>/dev/null || true
+      
+      # PAM-Module hinzufügen
+      if ! grep -q "pam_broker" /etc/pam.d/common-auth 2>/dev/null; then
+          echo "auth    sufficient      pam_broker.so" >> /etc/pam.d/common-auth
+      fi
+      
+      if ! grep -q "pam_broker" /etc/pam.d/common-session 2>/dev/null; then
+          echo "session optional        pam_broker.so" >> /etc/pam.d/common-session
+      fi
+      
+      # Home-Directory automatisch erstellen
+      if ! grep -q "pam_mkhomedir" /etc/pam.d/common-session 2>/dev/null; then
+          echo "session optional        pam_mkhomedir.so skel=/etc/skel umask=077" >> /etc/pam.d/common-session
+      fi
+      
+      # NSS-Konfiguration
+      log "Konfiguriere NSS..."
+      if ! grep -q "broker" /etc/nsswitch.conf 2>/dev/null; then
+          sed -i "s/passwd:.*compat/& broker/" /etc/nsswitch.conf
+          sed -i "s/group:.*compat/& broker/" /etc/nsswitch.conf
+      fi
+      
+      # GNOME Keyring für Intune konfigurieren (Behebt 4u3f8 Fehler)
+      log "Konfiguriere GNOME Keyring für Intune..."
+      
+      # GNOME Keyring Pakete installieren
+      DEBIAN_FRONTEND=noninteractive apt-get install -y gnome-keyring libpam-gnome-keyring >/dev/null 2>&1 || true
+      
+      # PAM für Keyring konfigurieren
+      if ! grep -q "pam_gnome_keyring" /etc/pam.d/common-auth 2>/dev/null; then
+          echo "auth    optional        pam_gnome_keyring.so" >> /etc/pam.d/common-auth
+      fi
+      
+      if ! grep -q "pam_gnome_keyring" /etc/pam.d/common-session 2>/dev/null; then
+          echo "session optional        pam_gnome_keyring.so auto_start" >> /etc/pam.d/common-session
+      fi
+      
+      # Standard-Keyring für alle Benutzer erstellen
+      log "Erstelle Standard-Keyring-Konfiguration..."
+      
+      # Keyring-Ordner für ubuntu-Benutzer erstellen
+      mkdir -p /home/ubuntu/.local/share/keyrings
+      chown -R ubuntu:ubuntu /home/ubuntu/.local/share/keyrings
+      chmod 700 /home/ubuntu/.local/share/keyrings
+      
+      # Default-Keyring erstellen (wird beim ersten Login aktiviert)
+      cat > /home/ubuntu/.local/share/keyrings/default << "KEYRING_EOF"
+[keyring]
+display-name=Standard
+ctime=1625097600
+mtime=1625097600
+lock-on-idle=false
+lock-after=false
+KEYRING_EOF
+      
+      chown ubuntu:ubuntu /home/ubuntu/.local/share/keyrings/default
+      chmod 600 /home/ubuntu/.local/share/keyrings/default
+      
+      # XDG-Umgebung für Keyring
+      mkdir -p /home/ubuntu/.config/autostart
+      cat > /home/ubuntu/.config/autostart/gnome-keyring.desktop << "AUTOSTART_EOF"
+[Desktop Entry]
+Type=Application
+Name=GNOME Keyring
+Exec=/usr/bin/gnome-keyring-daemon --start --components=secrets,ssh
+OnlyShowIn=GNOME;Unity;MATE;Xfce;LXDE;
+AutostartCondition=GNOME3 unless-session gnome
+NoDisplay=true
+AUTOSTART_EOF
+      
+      chown -R ubuntu:ubuntu /home/ubuntu/.config
+      chmod 755 /home/ubuntu/.config/autostart
+      chmod 644 /home/ubuntu/.config/autostart/gnome-keyring.desktop
+      
+      # Services aktivieren
+      systemctl enable microsoft-identity-broker >/dev/null 2>&1 || true
+      
+      log "SSO Setup abgeschlossen"
+      log "Neustart erforderlich für vollständige SSO-Aktivierung"
+      EOF'
+      
+    # SSO Setup Script ausführbar machen und ausführen
+    - curtin in-target -- chmod +x /root/ubuntu-sso-setup.sh
+    - curtin in-target -- /root/ubuntu-sso-setup.sh || true
+      
     # Server-Pakete entfernen
     - >-
       curtin in-target -- apt-get remove -y
       btrfs-progs cryptsetup* lvm2 xfsprogs
-      ubuntu-server ubuntu-server-minimal
+      ubuntu-server ubuntu-server-minimal || true
       
     # Cloud-init behalten
     - curtin in-target -- apt-get install -y cloud-init
     - curtin in-target -- apt-get autoremove -y
     
-    # Ubuntu SSO Setup für Microsoft Entra ID
-    - curtin in-target -- bash -c 'LOG_FILE="/var/log/ubuntu-sso-setup.log"'
-    - curtin in-target -- bash -c 'log() { echo "$(date "+%Y-%m-%d %H:%M:%S") - $1" | tee -a "$LOG_FILE"; }'
-    - curtin in-target -- bash -c 'log "SSO Setup gestartet"'
-    
-    # Dependencies für SSO installieren
-    - curtin in-target -- apt-get update
-    - curtin in-target -- apt-get install -y openjdk-11-jre libicu70 libjavascriptcoregtk-4.0-18 libwebkit2gtk-4.0-37 || true
-    - curtin in-target -- apt-get install -y default-jre libicu-dev || true
-    
-    # Microsoft Identity Broker installieren
-    - curtin in-target -- apt-get install -y microsoft-identity-broker || true
-    
-    # PAM-Konfiguration für SSO
-    - curtin in-target -- cp /etc/pam.d/common-auth /etc/pam.d/common-auth.backup
-    - curtin in-target -- cp /etc/pam.d/common-session /etc/pam.d/common-session.backup
-    
-    # PAM-Module hinzufügen
-    - curtin in-target -- bash -c 'if ! grep -q "pam_broker" /etc/pam.d/common-auth; then echo "auth    sufficient      pam_broker.so" >> /etc/pam.d/common-auth; fi'
-    - curtin in-target -- bash -c 'if ! grep -q "pam_broker" /etc/pam.d/common-session; then echo "session optional        pam_broker.so" >> /etc/pam.d/common-session; fi'
-    - curtin in-target -- bash -c 'if ! grep -q "pam_mkhomedir" /etc/pam.d/common-session; then echo "session optional        pam_mkhomedir.so skel=/etc/skel umask=077" >> /etc/pam.d/common-session; fi'
-    
-    # NSS-Konfiguration
-    - curtin in-target -- sed -i 's/passwd:.*compat/& broker/' /etc/nsswitch.conf
-    - curtin in-target -- sed -i 's/group:.*compat/& broker/' /etc/nsswitch.conf
-    
-    # Services aktivieren
-    - curtin in-target -- systemctl enable microsoft-identity-broker || true
-    
-    # authd für Ubuntu 24.04
-    - curtin in-target -- apt-get install -y authd || true
+    # SSO Script für spätere Verwendung verfügbar machen
+    - curtin in-target -- cp /root/ubuntu-sso-setup.sh /home/ubuntu/
+    - curtin in-target -- chown ubuntu:ubuntu /home/ubuntu/ubuntu-sso-setup.sh

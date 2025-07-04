@@ -16,11 +16,10 @@ autoinstall:
     - name: snapd-desktop-integration
     
   identity:
-    realname: 'Ubuntu User'
+    realname: ''
     username: ubuntu
-    # Einfaches Passwort für Tests - später ändern!
-    password: '$6$rounds=4096$saltsalt$3xv.VbSHBb2nirS35XpOn8/sSIGWmpnfhYa/1WTTQ8VPDGOZ73gOZPZ7xGj8Udy1Q5m7QbRZ.aI9O2pO8Cqkh.'
-    hostname: ubuntu-desktop
+    password: "$6$/EJRTPAuFLF6UCDQ$hoJf/WCXALcxXLHuc4cqyryVFH10nAgmsZiXbR4w.DoApeiCklhhkrduphh.aifM6EVtxh6AeewOenEFAh.YO0"
+    hostname: ubuntu
     
   locale: de_DE.UTF-8
   keyboard:
@@ -36,8 +35,8 @@ autoinstall:
     - echo 'linux-generic' > /run/kernel-meta-package
     
   late-commands:
-    # Passwort-Änderung beim ersten Login (mit Fehlerbehandlung)
-    - curtin in-target -- bash -c 'if id ubuntu >/dev/null 2>&1; then passwd -e ubuntu; else echo "Warning: User ubuntu not found"; fi'
+    # Passwort-Änderung beim ersten Login
+    - curtin in-target -- passwd -e ubuntu
     
     # Boot-Splash aktivieren
     - >-

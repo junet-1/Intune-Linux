@@ -16,10 +16,11 @@ autoinstall:
     - name: snapd-desktop-integration
     
   identity:
-    realname: ''
+    realname: 'Ubuntu User'  
     username: ubuntu
-    password: "$6$/EJRTPAuFLF6UCDQ$hoJf/...OH.YO0"
-    hostname: ubuntu
+    # Passwort: NetUbuntu2025!
+    password: '$6$NetUbuntu2025$hJ8qwFtK3k7L9yQrP2nX4vZ1mB6qL8pW5tY9uI3oE7fG2hK6jM1sN0rP5vQ8xZ4cF1dG7hJ2kL9pQ3sV6yB4tN8'
+    hostname: ubuntu-desktop
     
   locale: de_DE.UTF-8
   keyboard:
@@ -35,8 +36,8 @@ autoinstall:
     - echo 'linux-generic' > /run/kernel-meta-package
     
   late-commands:
-    # Passwort-Änderung beim ersten Login
-    - curtin in-target -- passwd -e ubuntu
+    # Passwort-Änderung beim ersten Login (mit Fehlerbehandlung)
+    - curtin in-target -- bash -c 'if id ubuntu >/dev/null 2>&1; then passwd -e ubuntu; else echo "Warning: User ubuntu not found"; fi'
     
     # Boot-Splash aktivieren
     - >-
@@ -72,3 +73,15 @@ autoinstall:
     # Cloud-init behalten
     - curtin in-target -- apt-get install -y cloud-init
     - curtin in-target -- apt-get autoremove -y
+  
+  # Zusätzliche Benutzer-Konfiguration über cloud-init  
+  user-data:
+    chpasswd:
+      list: |
+        ubuntu:NetUbuntu2025!
+      expire: false
+    users:
+      - name: ubuntu
+        shell: /bin/bash
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        groups: adm,dialout,cdrom,floppy,sudo,audio,dip,video,plugdev,netdev

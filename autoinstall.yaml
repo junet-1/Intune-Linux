@@ -20,7 +20,7 @@ autoinstall:
   identity:
     realname: 'Ubuntu User'
     username: ubuntu
-    password: "$6$/EJRTPAuFLF6UCDQ$hoJf/WCXALcxXLHuc4cqyryVFH10nAgmsZiXbR4w.DoApeiCklhhkrduphh.aifM6EVtxh6AeewOenEFAh.YO0"
+    password: "$6$/EJRTPAuFLF6UCDQ$hoJf/...OH.YO0"
     hostname: ubuntu-desktop
     
   locale: de_DE.UTF-8
@@ -82,25 +82,20 @@ autoinstall:
     - curtin in-target -- apt-get install -y cloud-init
     - curtin in-target -- apt-get autoremove -y
     
-    # Keyring für Intune konfigurieren
-    - curtin in-target -- systemctl enable gnome-keyring-daemon
-    
-    # Intune-Vorbereitung: Post-Boot-Script erstellen
+    # Setup-Script für Intune erstellen (ohne systemctl in chroot)
     - >-
-      curtin in-target -- bash -c 'cat > /home/ubuntu/setup-intune.sh << EOF
+      curtin in-target -- bash -c 'cat > /home/ubuntu/setup-intune.sh << "EOF"
       #!/bin/bash
-      # Keyring für Intune Enrollment vorbereiten
-      export GNOME_KEYRING_CONTROL=/run/user/\$UID/keyring
-      export SSH_AUTH_SOCK=/run/user/\$UID/keyring/ssh
+      echo "Keyring für Intune Enrollment wird konfiguriert..."
+      export GNOME_KEYRING_CONTROL=/run/user/$UID/keyring
+      export SSH_AUTH_SOCK=/run/user/$UID/keyring/ssh
       
-      # Keyring starten falls nicht aktiv
       if ! pgrep -x gnome-keyring-daemon >/dev/null; then
           gnome-keyring-daemon --start --components=secrets
       fi
       
-      # Intune Portal starten
-      echo "Keyring konfiguriert. Intune Portal kann jetzt gestartet werden."
-      echo "Führe aus: intune-portal"
+      echo "Keyring konfiguriert. Intune Portal kann jetzt gestartet werden:"
+      echo "intune-portal"
       EOF'
     - curtin in-target -- chmod +x /home/ubuntu/setup-intune.sh
     - curtin in-target -- chown ubuntu:ubuntu /home/ubuntu/setup-intune.sh

@@ -16,7 +16,7 @@ autoinstall:
     - name: snapd-desktop-integration
     
   identity:
-    realname: Ubuntu User
+    realname: 'Ubuntu User'  
     username: ubuntu
     password: '$6$NetUbuntu2025$hJ8qwFtK3k7L9yQrP2nX4vZ1mB6qL8pW5tY9uI3oE7fG2hK6jM1sN0rP5vQ8xZ4cF1dG7hJ2kL9pQ3sV6yB4tN8'
     hostname: ubuntu-desktop
@@ -35,14 +35,15 @@ autoinstall:
     
   late-commands:
     - curtin in-target -- passwd -e ubuntu
-    - curtin in-target -- sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/' /etc/default/grub
+    - curtin in-target -- sed -i /etc/default/grub -e 's/GRUB_CMDLINE_LINUX_DEFAULT=".*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/'
     - curtin in-target -- update-grub
     - rm -f /target/etc/netplan/00-installer-config*yaml
+    - printf "network:\n  version: 2\n  renderer: NetworkManager" > /target/etc/netplan/01-network-manager-all.yaml
     - curtin in-target -- wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft.gpg
-    - curtin in-target -- sh -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
-    - curtin in-target -- sh -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-intune-portal.list'
+    - curtin in-target -- bash -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
+    - curtin in-target -- bash -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-intune-portal.list'
     - curtin in-target -- apt-get update
-    - curtin in-target -- apt-get install -y microsoft-edge-stable
-    - curtin in-target -- apt-get install -y intune-portal
-    - curtin in-target -- apt-get remove -y btrfs-progs lvm2 xfsprogs ubuntu-server ubuntu-server-minimal
+    - curtin in-target -- apt-get install -y microsoft-edge-stable intune-portal
+    - curtin in-target -- apt-get remove -y btrfs-progs cryptsetup* lvm2 xfsprogs ubuntu-server ubuntu-server-minimal
+    - curtin in-target -- apt-get install -y cloud-init
     - curtin in-target -- apt-get autoremove -y

@@ -1,18 +1,16 @@
 #cloud-config
 autoinstall:
-  # version is an Autoinstall required field.
   version: 1
   
-  # This adds the default ubuntu-desktop packages to the system.
-  # Any desired additional packages may also be listed here.
+  # Standard Ubuntu Desktop Pakete
   packages:
     - ubuntu-desktop
     - curl
     - gnupg
     - wget
+    - openssh-server  # Für Remote-Management
     
-  # This adds the default snaps found on a 22.04 Ubuntu Desktop system.
-  # Any desired additional snaps may also be listed here.
+  # Standard Desktop Snaps
   snaps:
     - name: firefox
     - name: gnome-3-38-2004
@@ -20,13 +18,13 @@ autoinstall:
     - name: snap-store
     - name: snapd-desktop-integration
     
-  # User creation
+  # Benutzer-Konfiguration
   identity:
     realname: ''
     username: ubuntu
-    # SHA-512 von "NetUbuntu2025" - ersetze mit deinem Hash
+    # SHA-512 Hash von "NetUbuntu2025" - beim echten Deployment ersetzen
     password: "$6$/EJRTPAuFLF6UCDQ$hoJf/...OH.YO0"
-    hostname: ubuntu
+    hostname: ubuntu-laptop
     
   # Deutsche Lokalisierung
   locale: de_DE.UTF-8
@@ -34,74 +32,58 @@ autoinstall:
     layout: de
     variant: ""
     
-  # Storage layout
+  # Einfaches Storage Layout für Laptops
   storage:
     layout:
       name: direct
       
-  # Ubuntu Desktop uses the hwe flavor kernel by default.
+  # HWE Kernel für bessere Hardware-Unterstützung
   early-commands:
     - echo 'linux-generic-hwe-22.04' > /run/kernel-meta-package
     
-  # Installation customization
+  # Post-Installation Konfiguration
   late-commands:
-    # Erzwinge Passwort-Änderung beim ersten Login
+    # Passwort-Änderung beim ersten Login erzwingen
     - curtin in-target -- passwd -e ubuntu
     
-    # Enable the boot splash
+    # Boot-Splash aktivieren
     - >-
-      curtin in-target --
-      sed -i /etc/default/grub -e
+      curtin in-target -- sed -i /etc/default/grub -e
       's/GRUB_CMDLINE_LINUX_DEFAULT=".*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/'
     - curtin in-target -- update-grub
     
-    # Let NetworkManager handle network
-    - rm /target/etc/netplan/00-installer-config*yaml
+    # NetworkManager für Laptops (WLAN etc.)
+    - rm -f /target/etc/netplan/00-installer-config*yaml
     - >-
       printf "network:\n  version: 2\n  renderer: NetworkManager"
       > /target/etc/netplan/01-network-manager-all.yaml
       
-    # Microsoft GPG-Key hinzufügen
-    - >-
-      curtin in-target -- wget -qO- 
-      https://packages.microsoft.com/keys/microsoft.asc 
-      | gpg --dearmor > /usr/share/keyrings/microsoft.gpg
-      
-    # Edge Repository hinzufügen
+    # Microsoft Edge Repository hinzufügen
+    - curtin in-target -- wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft.gpg
     - >-
       curtin in-target -- bash -c 
-      'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] 
-      https://packages.microsoft.com/repos/edge stable main" 
-      > /etc/apt/sources.list.d/microsoft-edge.list'
+      'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
       
     # Intune Portal Repository hinzufügen
     - >-
       curtin in-target -- bash -c 
-      'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] 
-      https://packages.microsoft.com/ubuntu/22.04/prod jammy main" 
-      > /etc/apt/sources.list.d/microsoft-intune-portal.list'
+      'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/22.04/prod jammy main" > /etc/apt/sources.list.d/microsoft-intune-portal.list'
       
     # Microsoft Pakete installieren
     - curtin in-target -- apt-get update
     - curtin in-target -- apt-get install -y microsoft-edge-stable intune-portal
     
-    # Remove default filesystem tools not used with 'direct' storage layout
+    # Server-Pakete entfernen (nicht nötig auf Laptops)
     - >-
       curtin in-target -- apt-get remove -y
       btrfs-progs cryptsetup* lvm2 xfsprogs
-      
-    # Remove server packages not needed for desktop
-    - >-
-      curtin in-target -- apt-get remove -y
       ubuntu-server ubuntu-server-minimal
-      binutils byobu dmeventd finalrd gawk
-      kpartx mdadm ncurses-term needrestart open-iscsi openssh-server
-      sg3-utils ssh-import-id sssd thin-provisioning-tools vim tmux
-      sosreport screen open-vm-tools motd-news-config lxd-agent-loader
-      landscape-common htop git fonts-ubuntu-console ethtool
       
-    # Keep cloud-init
+    # SSH für Remote-Management konfigurieren
+    - curtin in-target -- systemctl enable ssh
+    
+    # Cloud-init behalten für weitere Konfiguration
     - curtin in-target -- apt-get install -y cloud-init
     
-    # Clean up
+    # Aufräumen
     - curtin in-target -- apt-get autoremove -y

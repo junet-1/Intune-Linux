@@ -50,18 +50,25 @@ autoinstall:
       printf "network:\n  version: 2\n  renderer: NetworkManager"
       > /target/etc/netplan/01-network-manager-all.yaml
       
-    # Microsoft Repository (KORRIGIERT für Ubuntu 24.04)
-    - curtin in-target -- wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft.gpg
+    # Microsoft GPG-Key richtig installieren
+    - curtin in-target -- wget -qO /tmp/microsoft.asc https://packages.microsoft.com/keys/microsoft.asc
+    - curtin in-target -- gpg --dearmor --output /usr/share/keyrings/microsoft.gpg /tmp/microsoft.asc
+    - curtin in-target -- rm /tmp/microsoft.asc
+    
+    # Edge Repository konfigurieren
     - >-
       curtin in-target -- bash -c 
       'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
+      
+    # Intune Portal Repository konfigurieren  
     - >-
       curtin in-target -- bash -c 
       'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-intune-portal.list'
       
-    # Microsoft Pakete installieren
-    - curtin in-target -- apt-get update
-    - curtin in-target -- apt-get install -y microsoft-edge-stable intune-portal
+    # Repository-Updates und Microsoft-Pakete installieren
+    - curtin in-target -- apt-get update || true
+    - curtin in-target -- apt-get install -y microsoft-edge-stable || true
+    - curtin in-target -- apt-get install -y intune-portal || true
     
     # Server-Pakete entfernen
     - >-

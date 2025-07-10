@@ -18,7 +18,7 @@ autoinstall:
   identity:
     realname: 'Ubuntu User'
     username: ubuntu
-    password: "$6$/EJRTPAuFLF6UCDQ$hoJf/...OH.YO0"
+    password: "$6$/EJRTPAuFLF6UCDQ$hoJf/WCXALcxXLHuc4cqyryVFH10nAgmsZiXbR4w.DoApeiCklhhkrduphh.aifM6EVtxh6AeewOenEFAh.YO0"
     hostname: ubuntu-desktop
     
   locale: de_DE.UTF-8

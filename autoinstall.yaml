@@ -7,8 +7,6 @@ autoinstall:
     - curl
     - gnupg
     - wget
-    - gnome-keyring  # Keyring wird bei Login aktiviert
-    - libsecret-1-0
     
   snaps:
     - name: firefox
@@ -20,7 +18,7 @@ autoinstall:
   identity:
     realname: 'Ubuntu User'
     username: ubuntu
-    password: "$6$/EJRTPAuFLF6UCDQ$hoJf/WCXALcxXLHuc4cqyryVFH10nAgmsZiXbR4w.DoApeiCklhhkrduphh.aifM6EVtxh6AeewOenEFAh.YO0"
+    password: "$6$/EJRTPAuFLF6UCDQ$hoJf/...OH.YO0"
     hostname: ubuntu-desktop
     
   locale: de_DE.UTF-8
@@ -32,7 +30,7 @@ autoinstall:
     layout:
       name: direct
       
-  # KORRIGIERT: Für Ubuntu 24.04 den Standard-Kernel verwenden
+  # Für Ubuntu 24.04 den Standard-Kernel verwenden
   early-commands:
     - echo 'linux-generic' > /run/kernel-meta-package
     
@@ -52,30 +50,6 @@ autoinstall:
       printf "network:\n  version: 2\n  renderer: NetworkManager"
       > /target/etc/netplan/01-network-manager-all.yaml
       
-    # Microsoft GPG-Keys vorbereiten
-    - curtin in-target -- wget -qO /tmp/microsoft.asc https://packages.microsoft.com/keys/microsoft.asc
-    - curtin in-target -- gpg --dearmor --output /usr/share/keyrings/microsoft.gpg /tmp/microsoft.asc
-    - curtin in-target -- rm /tmp/microsoft.asc
-    
-    # Einfaches Setup-Script erstellen (ohne Here-Document)
-    - curtin in-target -- bash -c 'echo "#!/bin/bash" > /home/ubuntu/setup-intune.sh'
-    - curtin in-target -- bash -c 'echo "# Intune Setup" >> /home/ubuntu/setup-intune.sh'
-    - curtin in-target -- bash -c 'echo "sudo apt-get update" >> /home/ubuntu/setup-intune.sh'
-    - curtin in-target -- bash -c 'echo "sudo apt-get install -y openjdk-11-jre" >> /home/ubuntu/setup-intune.sh'
-    - curtin in-target -- bash -c 'echo "sudo apt-get purge -y openjdk-21-jre-headless || true" >> /home/ubuntu/setup-intune.sh'
-    - curtin in-target -- bash -c 'echo "echo Microsoft Edge Repository..." >> /home/ubuntu/setup-intune.sh'
-    - curtin in-target -- bash -c 'echo "echo deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main | sudo tee /etc/apt/sources.list.d/microsoft-edge.list" >> /home/ubuntu/setup-intune.sh'
-    - curtin in-target -- bash -c 'echo "echo Intune Repository..." >> /home/ubuntu/setup-intune.sh'  
-    - curtin in-target -- bash -c 'echo "echo deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main | sudo tee /etc/apt/sources.list.d/microsoft-intune-portal.list" >> /home/ubuntu/setup-intune.sh'
-    - curtin in-target -- bash -c 'echo "sudo apt-get update" >> /home/ubuntu/setup-intune.sh'
-    - curtin in-target -- bash -c 'echo "sudo apt-get install -y microsoft-edge-stable intune-portal" >> /home/ubuntu/setup-intune.sh'
-    - curtin in-target -- bash -c 'echo "rm -rf ~/.cache/intune-portal" >> /home/ubuntu/setup-intune.sh'
-    - curtin in-target -- bash -c 'echo "echo Setup abgeschlossen! Starte: intune-portal" >> /home/ubuntu/setup-intune.sh'
-    
-    # Script ausführbar machen
-    - curtin in-target -- chmod +x /home/ubuntu/setup-intune.sh
-    - curtin in-target -- chown ubuntu:ubuntu /home/ubuntu/setup-intune.sh
-    
     # Server-Pakete entfernen
     - >-
       curtin in-target -- apt-get remove -y
@@ -85,3 +59,16 @@ autoinstall:
     # Cloud-init behalten
     - curtin in-target -- apt-get install -y cloud-init
     - curtin in-target -- apt-get autoremove -y
+    
+    # Microsoft-Pakete später installieren (Post-Boot-Script)
+    - >-
+      curtin in-target -- bash -c 'cat > /home/ubuntu/install-microsoft.sh << EOF
+      #!/bin/bash
+      wget -qO /tmp/microsoft.asc https://packages.microsoft.com/keys/microsoft.asc
+      sudo gpg --dearmor --output /usr/share/keyrings/microsoft.gpg /tmp/microsoft.asc
+      echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" | sudo tee /etc/apt/sources.list.d/microsoft-edge.list
+      sudo apt-get update
+      sudo apt-get install -y microsoft-edge-stable
+      rm /tmp/microsoft.asc
+      EOF'
+    - curtin in-target -- chmod +x /home/ubuntu/install-microsoft.sh

@@ -30,7 +30,7 @@ autoinstall:
     layout:
       name: direct
       
-  # Für Ubuntu 24.04 den Standard-Kernel verwenden
+  # KORRIGIERT: Für Ubuntu 24.04 den Standard-Kernel verwenden
   early-commands:
     - echo 'linux-generic' > /run/kernel-meta-package
     
@@ -50,6 +50,26 @@ autoinstall:
       printf "network:\n  version: 2\n  renderer: NetworkManager"
       > /target/etc/netplan/01-network-manager-all.yaml
       
+    # Microsoft GPG-Key richtig installieren
+    - curtin in-target -- wget -qO /tmp/microsoft.asc https://packages.microsoft.com/keys/microsoft.asc
+    - curtin in-target -- gpg --dearmor --output /usr/share/keyrings/microsoft.gpg /tmp/microsoft.asc
+    - curtin in-target -- rm /tmp/microsoft.asc
+    
+    # Edge Repository konfigurieren
+    - >-
+      curtin in-target -- bash -c 
+      'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
+      
+    # Intune Portal Repository konfigurieren  
+    - >-
+      curtin in-target -- bash -c 
+      'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-intune-portal.list'
+      
+    # Repository-Updates und Microsoft-Pakete installieren
+    - curtin in-target -- apt-get update || true
+    - curtin in-target -- apt-get install -y microsoft-edge-stable || true
+    - curtin in-target -- apt-get install -y intune-portal || true
+    
     # Server-Pakete entfernen
     - >-
       curtin in-target -- apt-get remove -y
@@ -59,16 +79,3 @@ autoinstall:
     # Cloud-init behalten
     - curtin in-target -- apt-get install -y cloud-init
     - curtin in-target -- apt-get autoremove -y
-    
-    # Microsoft-Pakete später installieren (Post-Boot-Script)
-    - >-
-      curtin in-target -- bash -c 'cat > /home/ubuntu/install-microsoft.sh << EOF
-      #!/bin/bash
-      wget -qO /tmp/microsoft.asc https://packages.microsoft.com/keys/microsoft.asc
-      sudo gpg --dearmor --output /usr/share/keyrings/microsoft.gpg /tmp/microsoft.asc
-      echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" | sudo tee /etc/apt/sources.list.d/microsoft-edge.list
-      sudo apt-get update
-      sudo apt-get install -y microsoft-edge-stable
-      rm /tmp/microsoft.asc
-      EOF'
-    - curtin in-target -- chmod +x /home/ubuntu/install-microsoft.sh

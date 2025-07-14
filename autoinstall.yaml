@@ -9,6 +9,9 @@ autoinstall:
     - wget
     - zenity
     - libnotify-bin
+    - ibus
+    - ibus-gtk
+    - ibus-gtk3
     
   snaps:
     - name: firefox
@@ -72,15 +75,26 @@ autoinstall:
     - curtin in-target -- apt-get install -y microsoft-edge-stable || true
     - curtin in-target -- apt-get install -y intune-portal || true
     
+    # Home-Directory-Struktur korrekt erstellen (als root, dann chown)
+    - curtin in-target -- mkdir -p /home/ubuntu/.config/autostart
+    - curtin in-target -- mkdir -p /home/ubuntu/.local/share
+    - curtin in-target -- mkdir -p /home/ubuntu/.cache
+    
     # Netlution Setup Script von GitHub holen
     - curtin in-target -- wget -O /home/ubuntu/netlution-setup.sh https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.sh || true
     - curtin in-target -- chmod +x /home/ubuntu/netlution-setup.sh || true
-    - curtin in-target -- chown ubuntu:ubuntu /home/ubuntu/netlution-setup.sh || true
     
-    # Autostart konfigurieren
-    - curtin in-target -- mkdir -p /home/ubuntu/.config/autostart
+    # Desktop Entry von GitHub holen
     - curtin in-target -- wget -O /home/ubuntu/.config/autostart/netlution-setup.desktop https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop || true
-    - curtin in-target -- chown -R ubuntu:ubuntu /home/ubuntu/.config || true
+    
+    # WICHTIG: Alle Permissions korrekt setzen
+    - curtin in-target -- chown -R ubuntu:ubuntu /home/ubuntu
+    - curtin in-target -- chmod 755 /home/ubuntu
+    - curtin in-target -- chmod 755 /home/ubuntu/.config
+    - curtin in-target -- chmod 755 /home/ubuntu/.config/autostart
+    - curtin in-target -- chmod 755 /home/ubuntu/.local
+    - curtin in-target -- chmod 755 /home/ubuntu/.local/share
+    - curtin in-target -- chmod 755 /home/ubuntu/.cache
     
     # Server-Pakete entfernen
     - >-

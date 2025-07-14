@@ -69,30 +69,12 @@ autoinstall:
     - curtin in-target -- apt-get install -y microsoft-edge-stable || true
     - curtin in-target -- apt-get install -y intune-portal || true
     
-    # Netlution Setup Script nach /tmp (als root zugänglich)
-    - curtin in-target -- wget -O /tmp/netlution-setup.sh https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.sh || true
-    - curtin in-target -- wget -O /tmp/netlution-setup.desktop https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop || true
-    - curtin in-target -- chmod +x /tmp/netlution-setup.sh
-    
-    # Setup-Installer Script erstellen (läuft beim ersten Login)
-    - >-
-      curtin in-target -- bash -c 'cat > /usr/local/bin/netlution-first-login << "EOF"
-      #!/bin/bash
-      if [[ ! -f /home/ubuntu/.config/netlution-setup-installed ]]; then
-          mkdir -p /home/ubuntu/.config/autostart
-          cp /tmp/netlution-setup.sh /home/ubuntu/netlution-setup.sh 2>/dev/null || true
-          cp /tmp/netlution-setup.desktop /home/ubuntu/.config/autostart/ 2>/dev/null || true
-          chmod +x /home/ubuntu/netlution-setup.sh 2>/dev/null || true
-          chown -R ubuntu:ubuntu /home/ubuntu/.config 2>/dev/null || true
-          chown ubuntu:ubuntu /home/ubuntu/netlution-setup.sh 2>/dev/null || true
-          touch /home/ubuntu/.config/netlution-setup-installed
-          /home/ubuntu/netlution-setup.sh &
-      fi
-      EOF'
-    - curtin in-target -- chmod +x /usr/local/bin/netlution-first-login
-    
-    # .profile anpassen für automatische Ausführung
-    - curtin in-target -- bash -c 'echo "[ ! -f ~/.config/netlution-setup-installed ] && /usr/local/bin/netlution-first-login &" >> /home/ubuntu/.profile'
+    # Netlution Setup - beide Dateien von GitHub holen und in /etc/skel ablegen  
+    - curtin in-target -- mkdir -p /etc/skel/Desktop
+    - curtin in-target -- wget -O /etc/skel/netlution-setup.sh https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.sh || true
+    - curtin in-target -- wget -O /etc/skel/Desktop/netlution-setup.desktop https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop || true
+    - curtin in-target -- chmod +x /etc/skel/netlution-setup.sh
+    - curtin in-target -- chmod +x /etc/skel/Desktop/netlution-setup.desktop
     
     # Server-Pakete entfernen
     - >-

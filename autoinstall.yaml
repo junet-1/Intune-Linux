@@ -34,48 +34,53 @@ autoinstall:
   early-commands:
     - echo 'linux-generic' > /run/kernel-meta-package
     
-  late-commands:
-    # Prüfen ob User existiert und ggf. Passwort-Änderung
+late-commands:
+    # Passwort-Änderung
     - curtin in-target -- bash -c 'if id ubuntu >/dev/null 2>&1; then passwd -e ubuntu; fi'
     
-    # Boot-Splash aktivieren
+    # Boot-Splash
     - >-
       curtin in-target -- sed -i /etc/default/grub -e
       's/GRUB_CMDLINE_LINUX_DEFAULT=".*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/'
     - curtin in-target -- update-grub
     
-    # NetworkManager konfigurieren
+    # NetworkManager
     - rm -f /target/etc/netplan/00-installer-config*yaml
     - >-
       printf "network:\n  version: 2\n  renderer: NetworkManager"
       > /target/etc/netplan/01-network-manager-all.yaml
       
-    # Microsoft GPG-Key richtig installieren
+    # Microsoft Repos und Pakete
     - curtin in-target -- wget -qO /tmp/microsoft.asc https://packages.microsoft.com/keys/microsoft.asc
     - curtin in-target -- gpg --dearmor --output /usr/share/keyrings/microsoft.gpg /tmp/microsoft.asc
     - curtin in-target -- rm /tmp/microsoft.asc
-    
-    # Edge Repository konfigurieren
     - >-
       curtin in-target -- bash -c 
       'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
-      
-    # Intune Portal Repository konfigurieren  
     - >-
       curtin in-target -- bash -c 
       'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-intune-portal.list'
-      
-    # Repository-Updates und Microsoft-Pakete installieren
     - curtin in-target -- apt-get update || true
-    - curtin in-target -- apt-get install -y microsoft-edge-stable || true
-    - curtin in-target -- apt-get install -y intune-portal || true
+    - curtin in-target -- apt-get install -y microsoft-edge-stable intune-portal || true
     
-    # Server-Pakete entfernen
+    # Netlution Setup Script von GitHub holen
+    - curtin in-target -- wget -O /home/ubuntu/netlution-setup.sh https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution_setup.sh
+    - curtin in-target -- chmod +x /home/ubuntu/netlution-setup.sh
+    - curtin in-target -- chown ubuntu:ubuntu /home/ubuntu/netlution-setup.sh
+    
+    # Autostart beim ersten Login
+    - curtin in-target -- mkdir -p /home/ubuntu/.config/autostart
     - >-
-      curtin in-target -- apt-get remove -y
-      btrfs-progs cryptsetup* lvm2 xfsprogs
-      ubuntu-server ubuntu-server-minimal
-      
-    # Cloud-init behalten
-    - curtin in-target -- apt-get install -y cloud-init
+      curtin in-target -- bash -c 'cat > /home/ubuntu/.config/autostart/netlution-setup.desktop << "EOF"
+      [Desktop Entry]
+      Type=Application
+      Name=Netlution Setup
+      Exec=/home/ubuntu/netlution-setup.sh
+      Hidden=false
+      NoDisplay=true
+      X-GNOME-Autostart-enabled=true
+      EOF'
+    - curtin in-target -- chown -R ubuntu:ubuntu /home/ubuntu/.config
+    
+    # Cleanup
     - curtin in-target -- apt-get autoremove -y

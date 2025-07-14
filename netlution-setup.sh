@@ -1,17 +1,34 @@
 #!/bin/bash
 
-# Interaktive Netlution Ubuntu SSO Setup App
-# Benutzergeführtes Setup mit Buttons
+# Am Anfang deines netlution-setup.sh Scripts hinzufügen:
 
+# Permission-Fix für .local Verzeichnisse
+fix_permissions() {
+    # Stelle sicher, dass alle benötigten Verzeichnisse existieren und korrekte Permissions haben
+    mkdir -p "$HOME/.local/share" "$HOME/.local/state" "$HOME/.cache" "$HOME/.config"
+    
+    # Permissions korrigieren falls nötig
+    chmod 755 "$HOME" "$HOME/.local" "$HOME/.local/share" "$HOME/.local/state" "$HOME/.cache" "$HOME/.config" 2>/dev/null || true
+    
+    # XDG Umgebungsvariablen setzen
+    export XDG_DATA_HOME="$HOME/.local/share"
+    export XDG_CONFIG_HOME="$HOME/.config"
+    export XDG_CACHE_HOME="$HOME/.cache"
+    export XDG_STATE_HOME="$HOME/.local/state"
+}
+
+# Prüfe ob dies der erste Login ist
 FIRST_LOGIN_FLAG="$HOME/.config/netlution-ubuntu-sso-first-login"
 
-# Prüfen ob bereits ausgeführt
 if [[ -f "$FIRST_LOGIN_FLAG" ]]; then
     exit 0
 fi
 
-# Warten bis Desktop geladen ist
-sleep 6
+# Permissions fix als erstes
+fix_permissions
+
+# Warten bis Desktop vollständig geladen ist
+sleep 8
 
 # Funktionen für die verschiedenen Setup-Schritte
 show_welcome() {

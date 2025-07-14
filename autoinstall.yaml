@@ -9,9 +9,6 @@ autoinstall:
     - wget
     - zenity
     - libnotify-bin
-    - ibus
-    - ibus-gtk
-    - ibus-gtk3
     
   snaps:
     - name: firefox
@@ -35,12 +32,11 @@ autoinstall:
     layout:
       name: direct
       
-  # KORRIGIERT: Für Ubuntu 24.04 den Standard-Kernel verwenden
   early-commands:
     - echo 'linux-generic' > /run/kernel-meta-package
     
   late-commands:
-    # Prüfen ob User existiert und ggf. Passwort-Änderung
+    # Passwort-Änderung
     - curtin in-target -- bash -c 'if id ubuntu >/dev/null 2>&1; then passwd -e ubuntu; fi'
     
     # Boot-Splash aktivieren
@@ -55,46 +51,48 @@ autoinstall:
       printf "network:\n  version: 2\n  renderer: NetworkManager"
       > /target/etc/netplan/01-network-manager-all.yaml
       
-    # Microsoft GPG-Key richtig installieren
+    # Microsoft GPG-Key installieren
     - curtin in-target -- wget -qO /tmp/microsoft.asc https://packages.microsoft.com/keys/microsoft.asc
     - curtin in-target -- gpg --dearmor --output /usr/share/keyrings/microsoft.gpg /tmp/microsoft.asc
     - curtin in-target -- rm /tmp/microsoft.asc
     
-    # Edge Repository konfigurieren
+    # Microsoft Repositories
     - >-
       curtin in-target -- bash -c 
       'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
-      
-    # Intune Portal Repository konfigurieren  
     - >-
       curtin in-target -- bash -c 
       'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-intune-portal.list'
       
-    # Repository-Updates und Microsoft-Pakete installieren
+    # Microsoft Pakete installieren
     - curtin in-target -- apt-get update || true
     - curtin in-target -- apt-get install -y microsoft-edge-stable || true
     - curtin in-target -- apt-get install -y intune-portal || true
     
-    # Home-Directory-Struktur korrekt erstellen (als root, dann chown)
-    - curtin in-target -- mkdir -p /home/ubuntu/.config/autostart
-    - curtin in-target -- mkdir -p /home/ubuntu/.local/share
-    - curtin in-target -- mkdir -p /home/ubuntu/.cache
+    # Netlution Setup Script nach /tmp (als root zugänglich)
+    - curtin in-target -- wget -O /tmp/netlution-setup.sh https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.sh || true
+    - curtin in-target -- wget -O /tmp/netlution-setup.desktop https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop || true
+    - curtin in-target -- chmod +x /tmp/netlution-setup.sh
     
-    # Netlution Setup Script von GitHub holen
-    - curtin in-target -- wget -O /home/ubuntu/netlution-setup.sh https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.sh || true
-    - curtin in-target -- chmod +x /home/ubuntu/netlution-setup.sh || true
+    # Setup-Installer Script erstellen (läuft beim ersten Login)
+    - >-
+      curtin in-target -- bash -c 'cat > /usr/local/bin/netlution-first-login << "EOF"
+      #!/bin/bash
+      if [[ ! -f /home/ubuntu/.config/netlution-setup-installed ]]; then
+          mkdir -p /home/ubuntu/.config/autostart
+          cp /tmp/netlution-setup.sh /home/ubuntu/netlution-setup.sh 2>/dev/null || true
+          cp /tmp/netlution-setup.desktop /home/ubuntu/.config/autostart/ 2>/dev/null || true
+          chmod +x /home/ubuntu/netlution-setup.sh 2>/dev/null || true
+          chown -R ubuntu:ubuntu /home/ubuntu/.config 2>/dev/null || true
+          chown ubuntu:ubuntu /home/ubuntu/netlution-setup.sh 2>/dev/null || true
+          touch /home/ubuntu/.config/netlution-setup-installed
+          /home/ubuntu/netlution-setup.sh &
+      fi
+      EOF'
+    - curtin in-target -- chmod +x /usr/local/bin/netlution-first-login
     
-    # Desktop Entry von GitHub holen
-    - curtin in-target -- wget -O /home/ubuntu/.config/autostart/netlution-setup.desktop https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop || true
-    
-    # WICHTIG: Alle Permissions korrekt setzen
-    - curtin in-target -- chown -R ubuntu:ubuntu /home/ubuntu
-    - curtin in-target -- chmod 755 /home/ubuntu
-    - curtin in-target -- chmod 755 /home/ubuntu/.config
-    - curtin in-target -- chmod 755 /home/ubuntu/.config/autostart
-    - curtin in-target -- chmod 755 /home/ubuntu/.local
-    - curtin in-target -- chmod 755 /home/ubuntu/.local/share
-    - curtin in-target -- chmod 755 /home/ubuntu/.cache
+    # .profile anpassen für automatische Ausführung
+    - curtin in-target -- bash -c 'echo "[ ! -f ~/.config/netlution-setup-installed ] && /usr/local/bin/netlution-first-login &" >> /home/ubuntu/.profile'
     
     # Server-Pakete entfernen
     - >-

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Netlution Ubuntu Setup
+Comment=Interaktives Setup für Netlution_Ubuntu Arbeitsplatz
+Exec=/home/ubuntu/netlution-setup.sh
+Icon=applications-system
+Terminal=false
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=GNOME;Unity;
+Categories=System;Settings;
+StartupNotify=false

@@ -69,12 +69,11 @@ autoinstall:
     - curtin in-target -- apt-get install -y microsoft-edge-stable || true
     - curtin in-target -- apt-get install -y intune-portal || true
     
-    # Netlution Setup - beide Dateien von GitHub holen und in /etc/skel ablegen  
-    - curtin in-target -- mkdir -p /etc/skel/Desktop
+    # Netlution Setup - moderne Ubuntu 24.04 Lösung: Apps in applications/
+    - curtin in-target -- mkdir -p /etc/skel/.local/share/applications
     - curtin in-target -- wget -O /etc/skel/netlution-setup.sh https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.sh || true
-    - curtin in-target -- wget -O /etc/skel/Desktop/netlution-setup.desktop https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop || true
+    - curtin in-target -- wget -O /etc/skel/.local/share/applications/netlution-setup.desktop https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop || true
     - curtin in-target -- chmod +x /etc/skel/netlution-setup.sh
-    - curtin in-target -- chmod +x /etc/skel/Desktop/netlution-setup.desktop
     
     # Server-Pakete entfernen
     - >-

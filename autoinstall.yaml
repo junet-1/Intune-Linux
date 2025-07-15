@@ -69,6 +69,30 @@ autoinstall:
     - curtin in-target -- apt-get install -y microsoft-edge-stable || true
     - curtin in-target -- apt-get install -y intune-portal || true
     
+    # Edge First Run Experience deaktivieren
+    - curtin in-target -- mkdir -p /etc/opt/microsoft/msedge/policies/managed
+    - >-
+      curtin in-target -- bash -c 'cat > /etc/opt/microsoft/msedge/policies/managed/netlution-policies.json << "EOF"
+      {
+        "HideFirstRunExperience": true,
+        "DefaultBrowserSettingEnabled": false,
+        "BrowserSignin": 1,
+        "SyncDisabled": false,
+        "ShowHomeButton": true,
+        "HomepageLocation": "https://netlution365.sharepoint.com/",
+        "NewTabPageLocation": "https://netlution365.sharepoint.com/"
+      }
+      EOF'
+    
+    # Ubuntu Willkommen-Dialog deaktivieren
+    - curtin in-target -- systemctl disable gnome-initial-setup-first-login.service || true
+    - curtin in-target -- systemctl mask gnome-initial-setup-first-login.service || true
+    - curtin in-target -- touch /etc/skel/.config/gnome-initial-setup-done
+    
+    # Netlution Logo für Dialogs herunterladen
+    - curtin in-target -- mkdir -p /etc/skel/.local/share/netlution
+    - curtin in-target -- wget -O /etc/skel/.local/share/netlution/logo.png https://netlution.de/wp-content/uploads/2023/08/netlution200x60.png || true
+    
     # Netlution Setup - automatischer Start beim ersten Login
     - curtin in-target -- mkdir -p /etc/skel/.config/autostart
     - curtin in-target -- wget -O /etc/skel/netlution-setup.sh https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.sh || true

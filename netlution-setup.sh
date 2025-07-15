@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# Am Anfang deines netlution-setup.sh Scripts hinzufügen:
-
 # Permission-Fix für .local Verzeichnisse
 fix_permissions() {
     # Stelle sicher, dass alle benötigten Verzeichnisse existieren und korrekte Permissions haben
@@ -36,7 +34,7 @@ show_welcome() {
         --title="🔧 Netlution_Ubuntu Setup" \
         --width=500 \
         --height=300 \
-        --text="<b><big>Willkommen bei deinem Netlution_Ubuntu Arbeitsplatz!</big></b>\n\n🏢 <b>Netlution IT Solutions</b>\n\nDein System ist fast bereit. Wir führen dich jetzt durch die letzten Schritte:\n\n✅ Microsoft 365 Anmeldung\n✅ Intune Geräteregistrierung\n✅ Desktop-Setup\n\n<i>Das dauert nur wenige Minuten!</i>" \
+        --text="<b><big>Willkommen bei deinem Netlution_Ubuntu Arbeitsplatz!</big></b>\n\n🏢 <b>Netlution IT Solutions</b>\n\nDein System ist fast bereit. Wir führen dich jetzt durch die letzten Schritte:\n\n✅ Microsoft 365 Anmeldung\n✅ Intune Geräteregistrierung\n✅ Passwort ändern\n✅ Desktop-Setup\n\n<i>Das dauert nur wenige Minuten!</i>" \
         --ok-label="Setup starten"
 }
 
@@ -44,24 +42,21 @@ setup_microsoft_edge() {
     if zenity --question \
         --title="🌐 Microsoft Edge Setup" \
         --width=450 \
-        --text="<b>Schritt 1: Microsoft 365 Anmeldung</b>\n\nWir öffnen jetzt Microsoft Edge mit den wichtigsten Netlution Portalen:\n\n• Microsoft 365 Portal\n• Teams\n• SharePoint\n\nBitte melde dich mit deinen <b>Netlution Microsoft 365</b> Anmeldedaten an.\n\n<small>Tipp: Du kannst alle Tabs offen lassen und nach der Anmeldung zu diesem Dialog zurückkehren.</small>" \
+        --text="<b>Schritt 1: Microsoft 365 Anmeldung</b>\n\nWir öffnen jetzt Microsoft Edge mit dem Netlution SharePoint:\n\n• Netlution SharePoint\n\nBitte melde dich mit deinen <b>Netlution Microsoft 365</b> Anmeldedaten an.\n\n<small>Tipp: Du kannst alle Tabs offen lassen und nach der Anmeldung zu diesem Dialog zurückkehren.</small>" \
         --ok-label="Edge öffnen" \
         --cancel-label="Überspringen"; then
         
-        # Microsoft Edge mit Netlution URLs starten
+        # Microsoft Edge mit Netlution SharePoint starten
         if command -v microsoft-edge >/dev/null 2>&1; then
             microsoft-edge \
                 --new-window \
-                "https://login.microsoftonline.com/" \
-                "https://portal.office.com/" \
-                "https://teams.microsoft.com/" \
                 "https://netlution365.sharepoint.com/" >/dev/null 2>&1 &
             
             # Kurze Pause, dann Bestätigung
             sleep 3
             zenity --info \
                 --title="🌐 Microsoft Edge" \
-                --text="✅ <b>Microsoft Edge wurde geöffnet!</b>\n\nBitte melde dich in den geöffneten Tabs an.\nKomm danach zu diesem Dialog zurück und klicke 'Weiter'." \
+                --text="✅ <b>Microsoft Edge wurde geöffnet!</b>\n\nBitte melde dich in SharePoint an.\nKomm danach zu diesem Dialog zurück und klicke 'Weiter'." \
                 --ok-label="Weiter"
         else
             zenity --warning \
@@ -101,42 +96,45 @@ setup_intune_portal() {
     fi
 }
 
+change_password() {
+    if zenity --question \
+        --title="🔐 Passwort ändern" \
+        --width=450 \
+        --text="<b>Schritt 3: Passwort ändern</b>\n\nWir empfehlen dir, das Standard-Passwort zu ändern.\n\nEin sicheres Passwort sollte enthalten:\n• Mindestens 8 Zeichen\n• Groß- und Kleinbuchstaben\n• Zahlen und Sonderzeichen\n\n<small>Du kannst diesen Schritt auch später über die Systemeinstellungen machen.</small>" \
+        --ok-label="Passwort ändern" \
+        --cancel-label="Später"; then
+        
+        # Versuche zuerst gnome-control-center
+        if command -v gnome-control-center >/dev/null 2>&1; then
+            gnome-control-center user-accounts >/dev/null 2>&1 &
+            zenity --info \
+                --title="🔐 Benutzerkonten" \
+                --text="✅ <b>Benutzerkonten-Einstellungen geöffnet!</b>\n\nKlicke auf dein Benutzerkonto und dann auf 'Passwort ändern'.\nKomm danach zu diesem Dialog zurück." \
+                --ok-label="Weiter"
+        else
+            # Fallback: Terminal-basierte Passwort-Änderung
+            if zenity --question \
+                --title="🔐 Passwort ändern" \
+                --text="Möchtest du dein Passwort jetzt über das Terminal ändern?\n\n<small>Das Terminal wird geöffnet und du kannst dein neues Passwort eingeben.</small>" \
+                --ok-label="Ja" \
+                --cancel-label="Später"; then
+                
+                gnome-terminal -- bash -c "echo 'Passwort für $(whoami) ändern:'; passwd; echo 'Drücke Enter um fortzufahren...'; read" &
+            fi
+        fi
+    fi
+}
+
 create_desktop_shortcuts() {
     if zenity --question \
         --title="🖥️ Desktop Setup" \
         --width=450 \
-        --text="<b>Schritt 3: Desktop-Shortcuts erstellen</b>\n\nMöchtest du hilfreiche Shortcuts auf deinem Desktop?\n\nWir erstellen Verknüpfungen für:\n• Netlution Microsoft 365\n• Netlution Teams\n• Netlution SharePoint\n• Geräteverwaltung\n\n<small>Du kannst diese später jederzeit anpassen oder löschen.</small>" \
+        --text="<b>Schritt 4: Desktop-Shortcuts erstellen</b>\n\nMöchtest du hilfreiche Shortcuts auf deinem Desktop?\n\nWir erstellen Verknüpfungen für:\n• Netlution SharePoint\n• Geräteverwaltung\n\n<small>Du kannst diese später jederzeit anpassen oder löschen.</small>" \
         --ok-label="Shortcuts erstellen" \
         --cancel-label="Überspringen"; then
         
         DESKTOP_DIR="$HOME/Desktop"
         mkdir -p "$DESKTOP_DIR"
-        
-        # Netlution Microsoft 365 Shortcut
-        cat > "$DESKTOP_DIR/Netlution-Microsoft365.desktop" << 'EOF'
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Netlution Microsoft 365
-Comment=Dein Zugang zu Netlution Office 365 Portal
-Exec=microsoft-edge https://portal.office.com/
-Icon=microsoft-edge
-Terminal=false
-Categories=Network;Office;
-EOF
-        
-        # Netlution Teams Shortcut
-        cat > "$DESKTOP_DIR/Netlution-Teams.desktop" << 'EOF'
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Netlution Teams
-Comment=Microsoft Teams für Netlution
-Exec=microsoft-edge https://teams.microsoft.com/
-Icon=teams
-Terminal=false
-Categories=Network;Chat;
-EOF
         
         # Netlution SharePoint Shortcut
         cat > "$DESKTOP_DIR/Netlution-SharePoint.desktop" << 'EOF'
@@ -176,41 +174,12 @@ EOF
 }
 
 show_completion() {
-    # Zusätzliche Optionen anbieten
-    CHOICE=$(zenity --list \
+    zenity --info \
         --title="🎉 Setup abgeschlossen!" \
         --width=500 \
-        --height=400 \
-        --text="<b><big>Dein Netlution_Ubuntu Arbeitsplatz ist bereit!</big></b>\n\n✅ Microsoft 365 URLs geöffnet\n✅ Intune Portal gestartet\n✅ Desktop-Shortcuts erstellt\n\n<b>Was möchtest du als nächstes tun?</b>" \
-        --column="Aktion" \
-        --ok-label="Auswählen" \
-        --cancel-label="Fertig" \
-        "Microsoft 365 Portal öffnen" \
-        "Teams direkt starten" \
-        "SharePoint öffnen" \
-        "System-Einstellungen öffnen" \
-        "Netlution IT-Team kontaktieren" \
-        "Setup-Dialog schließen")
-    
-    case "$CHOICE" in
-        "Microsoft 365 Portal öffnen")
-            microsoft-edge "https://portal.office.com/" >/dev/null 2>&1 &
-            ;;
-        "Teams direkt starten")
-            microsoft-edge "https://teams.microsoft.com/" >/dev/null 2>&1 &
-            ;;
-        "SharePoint öffnen")
-            microsoft-edge "https://netlution365.sharepoint.com/" >/dev/null 2>&1 &
-            ;;
-        "System-Einstellungen öffnen")
-            gnome-control-center >/dev/null 2>&1 &
-            ;;
-        "Netlution IT kontaktieren")
-            zenity --info \
-                --title="📞 Netlution IT-Team" \
-                --text="<b>Kontakt zum Netlution IT-Team:</b>\n\n📧 E-Mail: helpdesk@netlution.de\n> Wir helfen dir gerne bei Fragen oder Problemen!</small>"
-            ;;
-    esac
+        --height=300 \
+        --text="<b><big>Dein Netlution_Ubuntu Arbeitsplatz ist bereit!</big></b>\n\n✅ Microsoft 365 Zugang eingerichtet\n✅ Intune Portal konfiguriert\n✅ Passwort-Einstellungen überprüft\n✅ Desktop-Shortcuts erstellt\n\n<b>Dein System ist jetzt einsatzbereit!</b>\n\nBei Fragen wende dich an:\n📧 helpdesk@netlution.de" \
+        --ok-label="Fertig"
     
     # Abschluss-Benachrichtigung
     notify-send \
@@ -234,15 +203,21 @@ main() {
     # Schritt 3: Intune Portal Setup
     setup_intune_portal
     
-    # Schritt 4: Desktop-Shortcuts
+    # Schritt 4: Passwort ändern
+    change_password
+    
+    # Schritt 5: Desktop-Shortcuts
     create_desktop_shortcuts
     
-    # Schritt 5: Abschluss mit Optionen
+    # Schritt 6: Abschluss
     show_completion
     
     # Flag setzen - Setup als abgeschlossen markieren
     mkdir -p "$(dirname "$FIRST_LOGIN_FLAG")"
     touch "$FIRST_LOGIN_FLAG"
+    
+    # Autostart-Datei entfernen (läuft nur einmal)
+    rm -f "$HOME/.config/autostart/netlution-setup.desktop"
 }
 
 # Prüfen ob zenity verfügbar ist

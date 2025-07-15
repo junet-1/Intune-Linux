@@ -69,25 +69,11 @@ autoinstall:
     - curtin in-target -- apt-get install -y microsoft-edge-stable || true
     - curtin in-target -- apt-get install -y intune-portal || true
     
-    # Netlution Setup - automatischer Start + Anwendungsmenü
-    - curtin in-target -- mkdir -p /etc/skel/.local/share/applications
+    # Netlution Setup - automatischer Start beim ersten Login
     - curtin in-target -- mkdir -p /etc/skel/.config/autostart
     - curtin in-target -- wget -O /etc/skel/netlution-setup.sh https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.sh || true
-    - curtin in-target -- wget -O /etc/skel/.local/share/applications/netlution-setup.desktop https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop || true
+    - curtin in-target -- wget -O /etc/skel/.config/autostart/netlution-setup.desktop https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop || true
     - curtin in-target -- chmod +x /etc/skel/netlution-setup.sh
-    # Autostart-Version (läuft automatisch beim ersten Login)
-    - >-
-      curtin in-target -- bash -c 'cat > /etc/skel/.config/autostart/netlution-first-login.desktop << "EOF"
-      [Desktop Entry]
-      Type=Application
-      Name=Netlution First Login Setup
-      Exec=/home/ubuntu/netlution-setup.sh
-      Hidden=false
-      NoDisplay=true
-      X-GNOME-Autostart-enabled=true
-      OnlyShowIn=GNOME;Unity;
-      Comment=Automatisches Setup beim ersten Login
-      EOF'
     
     # Server-Pakete entfernen
     - >-

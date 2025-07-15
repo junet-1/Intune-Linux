@@ -31,18 +31,20 @@ sleep 8
 # Funktionen für die verschiedenen Setup-Schritte
 show_welcome() {
     zenity --info \
-        --title="🔧 Netlution_Ubuntu Setup" \
-        --width=500 \
-        --height=300 \
-        --text="<b><big>Willkommen bei deinem Netlution_Ubuntu Arbeitsplatz!</big></b>\n\n🏢 <b>Netlution IT Solutions</b>\n\nDein System ist fast bereit. Wir führen dich jetzt durch die letzten Schritte:\n\n✅ Microsoft 365 Anmeldung\n✅ Intune Geräteregistrierung\n✅ Passwort ändern\n✅ Desktop-Setup\n\n<i>Das dauert nur wenige Minuten!</i>" \
+        --title="🏢 Netlution Ubuntu Setup" \
+        --width=600 \
+        --height=400 \
+        ${LOGO_PATH:+--window-icon="$LOGO_PATH"} \
+        --text="<span font='16' weight='bold'>Willkommen bei deinem Netlution_Ubuntu Arbeitsplatz!</span>\n\n<span font='12' color='#1e3c72'><b>Netlution IT Solutions</b></span>\n\nDein System ist fast bereit. Wir führen dich jetzt durch die letzten Schritte:\n\n<span color='#27ae60'>✅ Microsoft 365 SharePoint Zugang</span>\n<span color='#27ae60'>✅ Intune Geräteregistrierung</span>\n<span color='#27ae60'>✅ Passwort-Sicherheit</span>\n<span color='#27ae60'>✅ Desktop-Konfiguration</span>\n\n<i>Das Setup dauert nur wenige Minuten!</i>\n\n<small>Bei Fragen: helpdesk@netlution.de</small>" \
         --ok-label="Setup starten"
 }
 
 setup_microsoft_edge() {
     if zenity --question \
-        --title="🌐 Microsoft Edge Setup" \
-        --width=450 \
-        --text="<b>Schritt 1: Microsoft 365 Anmeldung</b>\n\nWir öffnen jetzt Microsoft Edge mit dem Netlution SharePoint:\n\n• Netlution SharePoint\n\nBitte melde dich mit deinen <b>Netlution Microsoft 365</b> Anmeldedaten an.\n\n<small>Tipp: Du kannst alle Tabs offen lassen und nach der Anmeldung zu diesem Dialog zurückkehren.</small>" \
+        --title="🌐 Netlution SharePoint" \
+        --width=500 \
+        --window-icon="$HOME/.local/share/netlution/logo.png" \
+        --text="<span font='14' weight='bold' color='#1e3c72'>Schritt 1: Netlution SharePoint Zugang</span>\n\nWir öffnen jetzt Microsoft Edge mit dem Netlution SharePoint Portal.\n\n<span color='#e74c3c'>📋 <b>Wichtig:</b></span>\nBitte melde dich mit deinen <b>Netlution Microsoft 365</b> Anmeldedaten an.\n\n<span color='#7f8c8d'><small>💡 Tipp: Du kannst Edge geöffnet lassen und nach der Anmeldung zu diesem Dialog zurückkehren.</small></span>" \
         --ok-label="Edge öffnen" \
         --cancel-label="Überspringen"; then
         
@@ -56,21 +58,24 @@ setup_microsoft_edge() {
             sleep 3
             zenity --info \
                 --title="🌐 Microsoft Edge" \
-                --text="✅ <b>Microsoft Edge wurde geöffnet!</b>\n\nBitte melde dich in SharePoint an.\nKomm danach zu diesem Dialog zurück und klicke 'Weiter'." \
+                --window-icon="$HOME/.local/share/netlution/logo.png" \
+                --text="<span color='#27ae60'>✅ <b>Microsoft Edge wurde geöffnet!</b></span>\n\nBitte melde dich im Netlution SharePoint an.\nKomm danach zu diesem Dialog zurück und klicke 'Weiter'." \
                 --ok-label="Weiter"
         else
             zenity --warning \
                 --title="⚠️ Microsoft Edge" \
-                --text="Microsoft Edge ist nicht installiert.\nBitte wende dich an das Netlution IT-Team."
+                --window-icon="$HOME/.local/share/netlution/logo.png" \
+                --text="Microsoft Edge ist nicht installiert.\nBitte wende dich an das Netlution IT-Team.\n\n📧 helpdesk@netlution.de"
         fi
     fi
 }
 
 setup_intune_portal() {
     if zenity --question \
-        --title="📱 Intune Company Portal" \
-        --width=450 \
-        --text="<b>Schritt 2: Geräteregistrierung</b>\n\nJetzt registrieren wir dein Netlution_Ubuntu Gerät im Intune Company Portal.\n\nDas ermöglicht:\n• Zentrale Geräteverwaltung\n• Automatische App-Installation\n• Sicherheitsrichtlinien\n• Remote-Support\n\n<small>Die Registrierung ist erforderlich für den Zugang zu Netlution Ressourcen.</small>" \
+        --title="📱 Netlution Geräteverwaltung" \
+        --width=500 \
+        --window-icon="$HOME/.local/share/netlution/logo.png" \
+        --text="<span font='14' weight='bold' color='#1e3c72'>Schritt 2: Geräteregistrierung</span>\n\nJetzt registrieren wir dein Netlution_Ubuntu Gerät im Intune Company Portal.\n\n<span color='#3498db'><b>Das ermöglicht:</b></span>\n• Zentrale Geräteverwaltung\n• Automatische App-Installation\n• Sicherheitsrichtlinien\n• Remote-Support durch Netlution IT\n\n<span color='#e74c3c'><small>Die Registrierung ist erforderlich für den Zugang zu Netlution Ressourcen.</small></span>" \
         --ok-label="Intune Portal öffnen" \
         --cancel-label="Später"; then
         
@@ -79,28 +84,32 @@ setup_intune_portal() {
             sleep 2
             zenity --info \
                 --title="📱 Intune Company Portal" \
-                --text="✅ <b>Intune Company Portal wurde gestartet!</b>\n\nFolge den Anweisungen im Portal zur Geräteregistrierung.\nDas kann einige Minuten dauern." \
+                --window-icon="$HOME/.local/share/netlution/logo.png" \
+                --text="<span color='#27ae60'>✅ <b>Intune Company Portal wurde gestartet!</b></span>\n\nFolge den Anweisungen im Portal zur Geräteregistrierung.\nDas kann einige Minuten dauern." \
                 --ok-label="Weiter"
         elif command -v microsoft-edge >/dev/null 2>&1; then
             # Fallback: Browser mit Intune Web-Portal
             microsoft-edge "https://portal.manage.microsoft.com/" >/dev/null 2>&1 &
             zenity --info \
                 --title="📱 Intune Web-Portal" \
-                --text="✅ <b>Intune Web-Portal wurde geöffnet!</b>\n\n(Das Company Portal ist nicht installiert - verwende das Web-Portal)\n\nRegistriere dein Gerät über das Web-Interface." \
+                --window-icon="$HOME/.local/share/netlution/logo.png" \
+                --text="<span color='#27ae60'>✅ <b>Intune Web-Portal wurde geöffnet!</b></span>\n\n<small>(Das Company Portal ist nicht installiert - verwende das Web-Portal)</small>\n\nRegistriere dein Gerät über das Web-Interface." \
                 --ok-label="Weiter"
         else
             zenity --warning \
                 --title="⚠️ Intune Portal" \
-                --text="Intune Portal ist nicht verfügbar.\nBitte wende dich an das Netlution IT-Team."
+                --window-icon="$HOME/.local/share/netlution/logo.png" \
+                --text="Intune Portal ist nicht verfügbar.\nBitte wende dich an das Netlution IT-Team.\n\n📧 helpdesk@netlution.de"
         fi
     fi
 }
 
 change_password() {
     if zenity --question \
-        --title="🔐 Passwort ändern" \
-        --width=450 \
-        --text="<b>Schritt 3: Passwort ändern</b>\n\nWir empfehlen dir, das Standard-Passwort zu ändern.\n\nEin sicheres Passwort sollte enthalten:\n• Mindestens 8 Zeichen\n• Groß- und Kleinbuchstaben\n• Zahlen und Sonderzeichen\n\n<small>Du kannst diesen Schritt auch später über die Systemeinstellungen machen.</small>" \
+        --title="🔐 Netlution Sicherheit" \
+        --width=500 \
+        --window-icon="$HOME/.local/share/netlution/logo.png" \
+        --text="<span font='14' weight='bold' color='#1e3c72'>Schritt 3: Passwort-Sicherheit</span>\n\nWir empfehlen dir, das Standard-Passwort zu ändern.\n\n<span color='#e74c3c'><b>Ein sicheres Passwort sollte enthalten:</b></span>\n• Mindestens 8 Zeichen\n• Groß- und Kleinbuchstaben\n• Zahlen und Sonderzeichen\n\n<span color='#7f8c8d'><small>Du kannst diesen Schritt auch später über die Systemeinstellungen machen.</small></span>" \
         --ok-label="Passwort ändern" \
         --cancel-label="Später"; then
         
@@ -109,12 +118,14 @@ change_password() {
             gnome-control-center user-accounts >/dev/null 2>&1 &
             zenity --info \
                 --title="🔐 Benutzerkonten" \
-                --text="✅ <b>Benutzerkonten-Einstellungen geöffnet!</b>\n\nKlicke auf dein Benutzerkonto und dann auf 'Passwort ändern'.\nKomm danach zu diesem Dialog zurück." \
+                --window-icon="$HOME/.local/share/netlution/logo.png" \
+                --text="<span color='#27ae60'>✅ <b>Benutzerkonten-Einstellungen geöffnet!</b></span>\n\nKlicke auf dein Benutzerkonto und dann auf 'Passwort ändern'.\nKomm danach zu diesem Dialog zurück." \
                 --ok-label="Weiter"
         else
             # Fallback: Terminal-basierte Passwort-Änderung
             if zenity --question \
                 --title="🔐 Passwort ändern" \
+                --window-icon="$HOME/.local/share/netlution/logo.png" \
                 --text="Möchtest du dein Passwort jetzt über das Terminal ändern?\n\n<small>Das Terminal wird geöffnet und du kannst dein neues Passwort eingeben.</small>" \
                 --ok-label="Ja" \
                 --cancel-label="Später"; then
@@ -127,16 +138,17 @@ change_password() {
 
 create_desktop_shortcuts() {
     if zenity --question \
-        --title="🖥️ Desktop Setup" \
-        --width=450 \
-        --text="<b>Schritt 4: Desktop-Shortcuts erstellen</b>\n\nMöchtest du hilfreiche Shortcuts auf deinem Desktop?\n\nWir erstellen Verknüpfungen für:\n• Netlution SharePoint\n• Geräteverwaltung\n\n<small>Du kannst diese später jederzeit anpassen oder löschen.</small>" \
+        --title="🖥️ Netlution Desktop" \
+        --width=500 \
+        --window-icon="$HOME/.local/share/netlution/logo.png" \
+        --text="<span font='14' weight='bold' color='#1e3c72'>Schritt 4: Desktop-Konfiguration</span>\n\nMöchtest du hilfreiche Netlution Shortcuts auf deinem Desktop?\n\n<span color='#3498db'><b>Wir erstellen Verknüpfungen für:</b></span>\n• Netlution SharePoint Portal\n• Geräteverwaltung (Intune)\n\n<span color='#7f8c8d'><small>Du kannst diese später jederzeit anpassen oder löschen.</small></span>" \
         --ok-label="Shortcuts erstellen" \
         --cancel-label="Überspringen"; then
         
         DESKTOP_DIR="$HOME/Desktop"
         mkdir -p "$DESKTOP_DIR"
         
-        # Netlution SharePoint Shortcut
+        # Netlution SharePoint Shortcut mit Corporate Branding
         cat > "$DESKTOP_DIR/Netlution-SharePoint.desktop" << 'EOF'
 [Desktop Entry]
 Version=1.0
@@ -147,6 +159,7 @@ Exec=microsoft-edge https://netlution365.sharepoint.com/
 Icon=folder-documents
 Terminal=false
 Categories=Network;FileManager;
+StartupWMClass=Microsoft-edge
 EOF
         
         # Intune Verwaltung Shortcut
@@ -168,26 +181,37 @@ EOF
         
         zenity --info \
             --title="🖥️ Desktop Setup" \
-            --text="✅ <b>Desktop-Shortcuts wurden erstellt!</b>\n\nDu findest sie jetzt auf deinem Desktop.\nSie sind sofort einsatzbereit." \
+            --window-icon="$HOME/.local/share/netlution/logo.png" \
+            --text="<span color='#27ae60'>✅ <b>Desktop-Shortcuts wurden erstellt!</b></span>\n\nDu findest sie jetzt auf deinem Desktop.\nSie sind sofort einsatzbereit." \
             --ok-label="Weiter"
     fi
 }
 
 show_completion() {
     zenity --info \
-        --title="🎉 Setup abgeschlossen!" \
-        --width=500 \
-        --height=300 \
-        --text="<b><big>Dein Netlution_Ubuntu Arbeitsplatz ist bereit!</big></b>\n\n✅ Microsoft 365 Zugang eingerichtet\n✅ Intune Portal konfiguriert\n✅ Passwort-Einstellungen überprüft\n✅ Desktop-Shortcuts erstellt\n\n<b>Dein System ist jetzt einsatzbereit!</b>\n\nBei Fragen wende dich an:\n📧 helpdesk@netlution.de" \
+        --title="🎉 Netlution Setup Abgeschlossen" \
+        --width=600 \
+        --height=350 \
+        --window-icon="$HOME/.local/share/netlution/logo.png" \
+        --text="<span font='16' weight='bold' color='#27ae60'>🎉 Dein Netlution_Ubuntu Arbeitsplatz ist bereit!</span>\n\n<span font='12' color='#1e3c72'><b>Setup erfolgreich abgeschlossen:</b></span>\n\n<span color='#27ae60'>✅ Microsoft 365 SharePoint Zugang eingerichtet</span>\n<span color='#27ae60'>✅ Intune Portal konfiguriert</span>\n<span color='#27ae60'>✅ Passwort-Sicherheit überprüft</span>\n<span color='#27ae60'>✅ Desktop-Shortcuts erstellt</span>\n\n<span font='12' weight='bold' color='#2c3e50'>Dein System ist jetzt einsatzbereit!</span>\n\n<span color='#7f8c8d'>Bei Fragen oder Problemen wende dich an:</span>\n<span color='#e74c3c'>📧 helpdesk@netlution.de</span>\n\n<span font='10' color='#95a5a6'>Powered by Netlution IT Solutions</span>" \
         --ok-label="Fertig"
     
-    # Abschluss-Benachrichtigung
-    notify-send \
-        "Netlution_Ubuntu Setup" \
-        "🎉 Setup erfolgreich abgeschlossen!\n\nDein Arbeitsplatz ist einsatzbereit." \
-        --icon=dialog-information \
-        --app-name="Netlution IT" \
-        --expire-time=5000
+    # Abschluss-Benachrichtigung mit Corporate Branding
+    if [[ -f "$HOME/.local/share/netlution/logo.png" ]]; then
+        notify-send \
+            "Netlution Ubuntu Setup" \
+            "🎉 Setup erfolgreich abgeschlossen!\n\nDein Netlution Arbeitsplatz ist einsatzbereit." \
+            --icon="$HOME/.local/share/netlution/logo.png" \
+            --app-name="Netlution IT" \
+            --expire-time=5000
+    else
+        notify-send \
+            "Netlution Ubuntu Setup" \
+            "🎉 Setup erfolgreich abgeschlossen!\n\nDein Netlution Arbeitsplatz ist einsatzbereit." \
+            --icon=dialog-information \
+            --app-name="Netlution IT" \
+            --expire-time=5000
+    fi
 }
 
 # Hauptprogramm - Schritt für Schritt
@@ -224,6 +248,12 @@ main() {
 if ! command -v zenity >/dev/null 2>&1; then
     notify-send "Netlution Setup" "Setup-Dialog nicht verfügbar. Wende dich an das IT-Team." --icon=dialog-warning
     exit 1
+fi
+
+# Logo-Pfad setzen (mit Fallback)
+LOGO_PATH="$HOME/.local/share/netlution/logo.png"
+if [[ ! -f "$LOGO_PATH" ]]; then
+    LOGO_PATH=""
 fi
 
 # Setup starten

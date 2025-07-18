@@ -72,6 +72,7 @@ autoinstall:
     # Ubuntu Willkommen-Dialog deaktivieren
     - curtin in-target -- systemctl disable gnome-initial-setup-first-login.service || true
     - curtin in-target -- systemctl mask gnome-initial-setup-first-login.service || true
+    - curtin in-target -- mkdir -p /etc/skel/.config
     - curtin in-target -- touch /etc/skel/.config/gnome-initial-setup-done
     
     # Netlution Logo für Dialogs herunterladen

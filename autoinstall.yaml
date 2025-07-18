@@ -69,18 +69,6 @@ autoinstall:
     - curtin in-target -- apt-get install -y microsoft-edge-stable || true
     - curtin in-target -- apt-get install -y intune-portal || true
     
-    # Edge First Run Experience deaktivieren (vereinfacht)
-    - curtin in-target -- mkdir -p /etc/opt/microsoft/msedge/policies/managed
-    - curtin in-target -- bash -c 'echo "{" > /etc/opt/microsoft/msedge/policies/managed/netlution-policies.json'
-    - curtin in-target -- bash -c 'echo "  \"HideFirstRunExperience\": true," >> /etc/opt/microsoft/msedge/policies/managed/netlution-policies.json'
-    - curtin in-target -- bash -c 'echo "  \"DefaultBrowserSettingEnabled\": false," >> /etc/opt/microsoft/msedge/policies/managed/netlution-policies.json'
-    - curtin in-target -- bash -c 'echo "  \"BrowserSignin\": 1," >> /etc/opt/microsoft/msedge/policies/managed/netlution-policies.json'
-    - curtin in-target -- bash -c 'echo "  \"SyncDisabled\": false," >> /etc/opt/microsoft/msedge/policies/managed/netlution-policies.json'
-    - curtin in-target -- bash -c 'echo "  \"ShowHomeButton\": true," >> /etc/opt/microsoft/msedge/policies/managed/netlution-policies.json'
-    - curtin in-target -- bash -c 'echo "  \"HomepageLocation\": \"https://netlution365.sharepoint.com/\"," >> /etc/opt/microsoft/msedge/policies/managed/netlution-policies.json'
-    - curtin in-target -- bash -c 'echo "  \"NewTabPageLocation\": \"https://netlution365.sharepoint.com/\"" >> /etc/opt/microsoft/msedge/policies/managed/netlution-policies.json'
-    - curtin in-target -- bash -c 'echo "}" >> /etc/opt/microsoft/msedge/policies/managed/netlution-policies.json'
-    
     # Ubuntu Willkommen-Dialog deaktivieren
     - curtin in-target -- systemctl disable gnome-initial-setup-first-login.service || true
     - curtin in-target -- systemctl mask gnome-initial-setup-first-login.service || true
@@ -89,17 +77,6 @@ autoinstall:
     # Netlution Logo für Dialogs herunterladen
     - curtin in-target -- mkdir -p /etc/skel/.local/share/netlution
     - curtin in-target -- wget -O /etc/skel/.local/share/netlution/logo.png https://netlution.de/wp-content/uploads/2023/08/netlution200x60.png || true
-    
-    # Optional: Ubuntu Desktop mit Netlution Corporate Colors anpassen
-    - curtin in-target -- mkdir -p /etc/skel/.config/dconf
-    - >-
-      curtin in-target -- bash -c 'cat > /etc/skel/.config/dconf/user << "EOF"
-      [org/gnome/desktop/background]
-      picture-uri="file:///usr/share/backgrounds/ubuntu-default-greyscale-wallpaper.png"
-      picture-uri-dark="file:///usr/share/backgrounds/ubuntu-default-greyscale-wallpaper.png"
-      primary-color="#0062a9"
-      secondary-color="#b0b8bd"
-      EOF'
     
     # Netlution Setup - automatischer Start beim ersten Login
     - curtin in-target -- mkdir -p /etc/skel/.config/autostart

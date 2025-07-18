@@ -15,6 +15,26 @@ fix_permissions() {
     export XDG_STATE_HOME="$HOME/.local/state"
 }
 
+# Edge First Run Experience deaktivieren
+setup_edge_policies() {
+    if [[ -d /etc/opt/microsoft/msedge ]] || command -v microsoft-edge >/dev/null 2>&1; then
+        sudo mkdir -p /etc/opt/microsoft/msedge/policies/managed 2>/dev/null || true
+        if [[ -w /etc/opt/microsoft/msedge/policies/managed ]] || sudo test -w /etc/opt/microsoft/msedge/policies/managed 2>/dev/null; then
+            sudo cat > /etc/opt/microsoft/msedge/policies/managed/netlution-policies.json << 'EOF' 2>/dev/null || true
+{
+  "HideFirstRunExperience": true,
+  "DefaultBrowserSettingEnabled": false,
+  "BrowserSignin": 1,
+  "SyncDisabled": false,
+  "ShowHomeButton": true,
+  "HomepageLocation": "https://netlution365.sharepoint.com/",
+  "NewTabPageLocation": "https://netlution365.sharepoint.com/"
+}
+EOF
+        fi
+    fi
+}
+
 # Prüfe ob dies der erste Login ist
 FIRST_LOGIN_FLAG="$HOME/.config/netlution-ubuntu-sso-first-login"
 
@@ -220,6 +240,9 @@ main() {
     if ! show_welcome; then
         exit 0  # Benutzer hat abgebrochen
     fi
+    
+    # Edge-Policies konfigurieren (im Hintergrund)
+    setup_edge_policies
     
     # Schritt 2: Microsoft Edge Setup
     setup_microsoft_edge

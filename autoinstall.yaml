@@ -2,8 +2,6 @@
 autoinstall:
   version: 1
   
-  interactive-sections: []
-  
   packages:
     - ubuntu-desktop
     - curl
@@ -22,58 +20,67 @@ autoinstall:
   identity:
     realname: 'Ubuntu User'
     username: ubuntu
-    # Generate a new password hash with: python3 -c "import crypt; print(crypt.crypt('ubuntu', crypt.mksalt(crypt.METHOD_SHA512)))"
     password: "$6$/EJRTPAuFLF6UCDQ$hoJf/WCXALcxXLHuc4cqyryVFH10nAgmsZiXbR4w.DoApeiCklhhkrduphh.aifM6EVtxh6AeewOenEFAh.YO0"
     hostname: ubuntu-desktop
     
   locale: de_DE.UTF-8
   keyboard:
     layout: de
-    # Remove variant entirely if not needed
+    variant: ""
     
   storage:
     layout:
-      name: lvm
-      # More robust than 'direct'
+      name: direct
       
   early-commands:
     - echo 'linux-generic' > /run/kernel-meta-package
     
   late-commands:
-    # User setup
+    # Passwort-Änderung
     - curtin in-target -- bash -c 'if id ubuntu >/dev/null 2>&1; then passwd -e ubuntu; fi'
     
-    # GRUB configuration
-    - curtin in-target -- sed -i /etc/default/grub -e 's/GRUB_CMDLINE_LINUX_DEFAULT=".*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/'
+    # Boot-Splash aktivieren
+    - >-
+      curtin in-target -- sed -i /etc/default/grub -e
+      's/GRUB_CMDLINE_LINUX_DEFAULT=".*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/'
     - curtin in-target -- update-grub
     
-    # Microsoft repository setup (with better error handling)
+    # NetworkManager konfigurieren
+    - rm -f /target/etc/netplan/00-installer-config*yaml
+    - >-
+      printf "network:\n  version: 2\n  renderer: NetworkManager"
+      > /target/etc/netplan/01-network-manager-all.yaml
+      
+    # Microsoft GPG-Key installieren
     - curtin in-target -- wget -qO /tmp/microsoft.asc https://packages.microsoft.com/keys/microsoft.asc
     - curtin in-target -- gpg --dearmor --output /usr/share/keyrings/microsoft.gpg /tmp/microsoft.asc
-    - curtin in-target -- rm -f /tmp/microsoft.asc
-    - curtin in-target -- bash -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
-    - curtin in-target -- bash -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-intune-portal.list'
+    - curtin in-target -- rm /tmp/microsoft.asc
     
-    # Update and install Microsoft packages
-    - curtin in-target -- apt-get update
-    - curtin in-target -- apt-get install -y microsoft-edge-stable
-    - curtin in-target -- apt-get install -y intune-portal
+    # Microsoft Repositories
+    - >-
+      curtin in-target -- bash -c 
+      'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
+    - >-
+      curtin in-target -- bash -c 
+      'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-intune-portal.list'
+      
+    # Microsoft Pakete installieren
+    - curtin in-target -- apt-get update || true
+    - curtin in-target -- apt-get install -y microsoft-edge-stable || true
+    - curtin in-target -- apt-get install -y intune-portal || true
     
-    # GNOME initial setup disable
-    - curtin in-target -- systemctl disable gnome-initial-setup-first-login.service
-    - curtin in-target -- systemctl mask gnome-initial-setup-first-login.service
-    - curtin in-target -- mkdir -p /etc/skel/.config
-    - curtin in-target -- touch /etc/skel/.config/gnome-initial-setup-done
-    
-    # Netlution setup
-    - curtin in-target -- mkdir -p /etc/skel/.local/share/netlution
-    - curtin in-target -- wget -O /etc/skel/.local/share/netlution/logo.png https://netlution.de/wp-content/uploads/2023/08/netlution200x60.png
+    # Netlution Setup - automatischer Start beim ersten Login
     - curtin in-target -- mkdir -p /etc/skel/.config/autostart
-    - curtin in-target -- wget -O /etc/skel/netlution-setup.sh https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.sh
-    - curtin in-target -- wget -O /etc/skel/.config/autostart/netlution-setup.desktop https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop
+    - curtin in-target -- wget -O /etc/skel/netlution-setup.sh https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.sh || true
+    - curtin in-target -- wget -O /etc/skel/.config/autostart/netlution-setup.desktop https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop || true
     - curtin in-target -- chmod +x /etc/skel/netlution-setup.sh
     
-    # Cleanup
-    - curtin in-target -- apt-get remove -y btrfs-progs cryptsetup* lvm2 xfsprogs ubuntu-server ubuntu-server-minimal
+    # Server-Pakete entfernen
+    - >-
+      curtin in-target -- apt-get remove -y
+      btrfs-progs cryptsetup* lvm2 xfsprogs
+      ubuntu-server ubuntu-server-minimal
+      
+    # Cloud-init behalten
     - curtin in-target -- apt-get install -y cloud-init
     - curtin in-target -- apt-get autoremove -y

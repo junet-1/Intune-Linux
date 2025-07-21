@@ -23,7 +23,7 @@ autoinstall:
     realname: 'Ubuntu User'
     username: ubuntu
     # Generate a new password hash with: python3 -c "import crypt; print(crypt.crypt('ubuntu', crypt.mksalt(crypt.METHOD_SHA512)))"
-    password: "$6$rounds=4096$saltsalt$3xzPjmXAZCqo/9fz7lX1X5JXf2lKJ5XZcVqKv4K5x5K5x5K5x5K5x5K5x5K5x5K5x5K5x5K5x5"
+    password: "$6$/EJRTPAuFLF6UCDQ$hoJf/WCXALcxXLHuc4cqyryVFH10nAgmsZiXbR4w.DoApeiCklhhkrduphh.aifM6EVtxh6AeewOenEFAh.YO0"
     hostname: ubuntu-desktop
     
   locale: de_DE.UTF-8

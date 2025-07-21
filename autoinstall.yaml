@@ -47,12 +47,6 @@ autoinstall:
     - curtin in-target -- sed -i /etc/default/grub -e 's/GRUB_CMDLINE_LINUX_DEFAULT=".*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/'
     - curtin in-target -- update-grub
     
-    # Network configuration
-    - rm -f /target/etc/netplan/00-installer-config*yaml
-    - echo "network:" > /target/etc/netplan/01-network.yaml
-    - echo "  version: 2" >> /target/etc/netplan/01-network.yaml
-    - echo "  renderer: NetworkManager" >> /target/etc/netplan/01-network.yaml
-    
     # Microsoft repository setup (with better error handling)
     - curtin in-target -- wget -qO /tmp/microsoft.asc https://packages.microsoft.com/keys/microsoft.asc
     - curtin in-target -- gpg --dearmor --output /usr/share/keyrings/microsoft.gpg /tmp/microsoft.asc

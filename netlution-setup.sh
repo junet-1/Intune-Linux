@@ -62,6 +62,10 @@ sleep 8
 
 # Sicherstellen dass Autostart nach Reboot funktioniert
 ensure_autostart_after_reboot() {
+    # Log-Verzeichnis erstellen
+    mkdir -p "$HOME/.local/share"
+    echo "$(date): Autostart wird eingerichtet" >> "$HOME/.local/share/netlution-setup.log"
+    
     # Skript an dauerhaften Ort kopieren falls noch nicht dort
     SCRIPT_PATH="$HOME/.local/bin/netlution-setup.sh"
     mkdir -p "$(dirname "$SCRIPT_PATH")"
@@ -70,6 +74,7 @@ ensure_autostart_after_reboot() {
     if [[ "$0" != "$SCRIPT_PATH" ]]; then
         cp "$0" "$SCRIPT_PATH"
         chmod +x "$SCRIPT_PATH"
+        echo "$(date): Skript kopiert nach $SCRIPT_PATH" >> "$HOME/.local/share/netlution-setup.log"
     fi
     
     # Autostart-Desktop-Datei erstellen/aktualisieren
@@ -82,17 +87,94 @@ Version=1.0
 Type=Application
 Name=Netlution Ubuntu Setup
 Comment=Automatisches Setup für Netlution Ubuntu Arbeitsplatz
-Exec=$SCRIPT_PATH
-Icon=netlution-setup
+Exec=bash -c 'sleep 15 && "$SCRIPT_PATH" --post-reboot'
+Icon=applications-system
 Terminal=false
 NoDisplay=true
 Hidden=false
 X-GNOME-Autostart-enabled=true
 StartupNotify=false
 Categories=System;Setup;
+MimeType=
 EOF
     
     chmod +x "$AUTOSTART_DIR/netlution-setup.desktop"
+    echo "$(date): Autostart-Datei erstellt in $AUTOSTART_DIR" >> "$HOME/.local/share/netlution-setup.log"
+    
+    # Zusätzlich: Backup-Autostart über .bashrc (falls Desktop-Autostart nicht funktioniert)
+    if ! grep -q "netlution-setup-post-reboot" "$HOME/.bashrc" 2>/dev/null; then
+        cat >> "$HOME/.bashrc" << 'EOF'
+
+# Netlution Setup - Post-Reboot Check (läuft nur einmal)
+if [[ -f "$HOME/.config/netlution-ubuntu-reboot-phase" && ! -f "$HOME/.config/netlution-ubuntu-sso-first-login" ]]; then
+    # Nur in interaktiven Sessions und mit GUI
+    if [[ $- == *i* && -n "$DISPLAY" ]]; then
+        echo "Netlution Setup wird fortgesetzt..."
+        # Kurze Verzögerung dann Setup starten
+        (sleep 5 && "$HOME/.local/bin/netlution-setup.sh" --post-reboot 2>/dev/null &)
+    fi
+fi
+EOF
+        echo "$(date): Backup-Autostart über .bashrc hinzugefügt" >> "$HOME/.local/share/netlution-setup.log"
+    fi
+}
+
+# Debug-Funktion für Troubleshooting
+debug_setup() {
+    echo "=== Netlution Setup Debug ==="
+    echo "Aktueller Pfad: $0"
+    echo "Aktuelle Zeit: $(date)"
+    echo "User: $(whoami)"
+    echo "Display: $DISPLAY"
+    echo "Desktop Session: $XDG_CURRENT_DESKTOP"
+    echo ""
+    
+    echo "=== Flag Status ==="
+    echo "FIRST_LOGIN_FLAG ($FIRST_LOGIN_FLAG): $(test -f "$FIRST_LOGIN_FLAG" && echo "EXISTS" || echo "NOT FOUND")"
+    echo "REBOOT_PHASE_FLAG ($REBOOT_PHASE_FLAG): $(test -f "$REBOOT_PHASE_FLAG" && echo "EXISTS" || echo "NOT FOUND")"
+    echo ""
+    
+    echo "=== Autostart Status ==="
+    AUTOSTART_FILE="$HOME/.config/autostart/netlution-setup.desktop"
+    echo "Autostart-Datei: $(test -f "$AUTOSTART_FILE" && echo "EXISTS" || echo "NOT FOUND")"
+    if [[ -f "$AUTOSTART_FILE" ]]; then
+        echo "Autostart-Inhalt:"
+        cat "$AUTOSTART_FILE" | sed 's/^/  /'
+    fi
+    echo ""
+    
+    SCRIPT_PATH="$HOME/.local/bin/netlution-setup.sh"
+    echo "Skript-Kopie: $(test -f "$SCRIPT_PATH" && echo "EXISTS" || echo "NOT FOUND")"
+    if [[ -f "$SCRIPT_PATH" ]]; then
+        echo "Berechtigung: $(ls -la "$SCRIPT_PATH")"
+    fi
+    echo ""
+    
+    echo "=== Log-Datei ==="
+    LOG_FILE="$HOME/.local/share/netlution-setup.log"
+    if [[ -f "$LOG_FILE" ]]; then
+        echo "Letzte 10 Log-Einträge:"
+        tail -10 "$LOG_FILE" | sed 's/^/  /'
+    else
+        echo "Keine Log-Datei gefunden"
+    fi
+    echo ""
+    
+    echo "=== Befehle verfügbar ==="
+    echo "zenity: $(command -v zenity || echo "NOT FOUND")"
+    echo "notify-send: $(command -v notify-send || echo "NOT FOUND")"
+    echo ""
+    
+    echo "=== Nächste Schritte ==="
+    if [[ -f "$REBOOT_PHASE_FLAG" && ! -f "$FIRST_LOGIN_FLAG" ]]; then
+        echo "Status: Setup wartet auf Post-Reboot Fortsetzung"
+        echo "Führe aus: $0 --post-reboot"
+    elif [[ -f "$FIRST_LOGIN_FLAG" ]]; then
+        echo "Status: Setup bereits abgeschlossen"
+    else
+        echo "Status: Setup noch nicht gestartet"
+        echo "Führe aus: $0"
+    fi
 }
 
 # Funktionen für die verschiedenen Setup-Schritte
@@ -394,10 +476,35 @@ main() {
 
 # Post-Reboot Hauptprogramm
 main_post_reboot() {
+    # Debug: Logging für Troubleshooting
+    echo "$(date): Post-Reboot Setup gestartet" >> "$HOME/.local/share/netlution-setup.log"
+    
+    # Kurz warten bis Desktop vollständig geladen ist
+    sleep 10
+    
+    # Prüfen ob zenity verfügbar ist
+    if ! command -v zenity >/dev/null 2>&1; then
+        echo "$(date): Zenity nicht verfügbar" >> "$HOME/.local/share/netlution-setup.log"
+        notify-send "Netlution Setup" "Setup-Dialog nicht verfügbar nach Reboot. Starte manuell!" --icon=dialog-warning
+        return 1
+    fi
+    
+    # Prüfen ob Display verfügbar ist
+    if [[ -z "$DISPLAY" ]]; then
+        export DISPLAY=:0
+        echo "$(date): DISPLAY auf :0 gesetzt" >> "$HOME/.local/share/netlution-setup.log"
+    fi
+    
+    # Test-Benachrichtigung dass Post-Reboot läuft
+    notify-send "Netlution Setup" "Setup wird nach Neustart fortgesetzt..." --icon=dialog-information
+    
     # Begrüßung nach Neustart
     if ! show_post_reboot_welcome; then
-        exit 0
+        echo "$(date): Post-Reboot Welcome abgebrochen" >> "$HOME/.local/share/netlution-setup.log"
+        return 1
     fi
+    
+    echo "$(date): Post-Reboot Welcome erfolgreich" >> "$HOME/.local/share/netlution-setup.log"
     
     # Verbleibende Setup-Schritte
     setup_intune_portal
@@ -411,6 +518,8 @@ main_post_reboot() {
     
     # Autostart-Datei entfernen (läuft nur einmal)
     rm -f "$HOME/.config/autostart/netlution-setup.desktop"
+    
+    echo "$(date): Post-Reboot Setup abgeschlossen" >> "$HOME/.local/share/netlution-setup.log"
 }
 
 # Prüfen ob zenity verfügbar ist
@@ -428,6 +537,8 @@ fi
 # Prüfen ob wir nach einem Reboot sind
 if [[ "$1" == "--post-reboot" ]]; then
     main_post_reboot
+elif [[ "$1" == "--debug" ]]; then
+    debug_setup
 else
     main
 fi

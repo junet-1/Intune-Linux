@@ -36,6 +36,15 @@ autoinstall:
     - echo 'linux-generic' > /run/kernel-meta-package
     
   late-commands:
+    # Hostname zu NET-XXXXX ändern (5-stellige Random ID)
+    - >-
+      curtin in-target -- bash -c '
+      NEW_HOSTNAME="NET-$(shuf -i 10000-99999 -n 1)";
+      echo "$NEW_HOSTNAME" > /etc/hostname;
+      sed -i "s/ubuntu-desktop/$NEW_HOSTNAME/g" /etc/hosts;
+      sed -i "s/127.0.1.1.*/127.0.1.1\t$NEW_HOSTNAME/g" /etc/hosts
+      '
+    
     # Passwort-Änderung
     - curtin in-target -- bash -c 'if id ubuntu >/dev/null 2>&1; then passwd -e ubuntu; fi'
     

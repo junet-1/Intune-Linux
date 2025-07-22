@@ -46,14 +46,54 @@ if [[ -f "$REBOOT_PHASE_FLAG" ]]; then
 fi
 
 if [[ -f "$FIRST_LOGIN_FLAG" ]]; then
+    # Setup bereits abgeschlossen - Autostart-Datei entfernen falls noch vorhanden
+    rm -f "$HOME/.config/autostart/netlution-setup.desktop"
     exit 0
 fi
 
 # Permissions fix als erstes
 fix_permissions
 
+# Autostart-Mechanik sicherstellen (für den Fall eines Reboots)
+ensure_autostart_after_reboot
+
 # Warten bis Desktop vollständig geladen ist
 sleep 8
+
+# Sicherstellen dass Autostart nach Reboot funktioniert
+ensure_autostart_after_reboot() {
+    # Skript an dauerhaften Ort kopieren falls noch nicht dort
+    SCRIPT_PATH="$HOME/.local/bin/netlution-setup.sh"
+    mkdir -p "$(dirname "$SCRIPT_PATH")"
+    
+    # Nur kopieren wenn es sich nicht um denselben Pfad handelt
+    if [[ "$0" != "$SCRIPT_PATH" ]]; then
+        cp "$0" "$SCRIPT_PATH"
+        chmod +x "$SCRIPT_PATH"
+    fi
+    
+    # Autostart-Desktop-Datei erstellen/aktualisieren
+    AUTOSTART_DIR="$HOME/.config/autostart"
+    mkdir -p "$AUTOSTART_DIR"
+    
+    cat > "$AUTOSTART_DIR/netlution-setup.desktop" << EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Netlution Ubuntu Setup
+Comment=Automatisches Setup für Netlution Ubuntu Arbeitsplatz
+Exec=$SCRIPT_PATH
+Icon=netlution-setup
+Terminal=false
+NoDisplay=true
+Hidden=false
+X-GNOME-Autostart-enabled=true
+StartupNotify=false
+Categories=System;Setup;
+EOF
+    
+    chmod +x "$AUTOSTART_DIR/netlution-setup.desktop"
+}
 
 # Funktionen für die verschiedenen Setup-Schritte
 show_welcome() {
@@ -101,6 +141,9 @@ setup_microsoft_edge() {
                 # Flag setzen für Post-Reboot Phase
                 touch "$REBOOT_PHASE_FLAG"
                 
+                # Sicherstellen dass das Skript für den Neustart verfügbar ist
+                ensure_autostart_after_reboot
+                
                 # Neustart-Benachrichtigung
                 zenity --info \
                     --title="🔄 Neustart wird eingeleitet" \
@@ -115,6 +158,8 @@ setup_microsoft_edge() {
             else
                 # Benutzer möchte später neu starten
                 touch "$REBOOT_PHASE_FLAG"
+                ensure_autostart_after_reboot
+                
                 zenity --info \
                     --title="🔄 Neustart später" \
                     --window-icon="$HOME/.local/share/netlution/logo.png" \
@@ -330,7 +375,9 @@ show_post_reboot_welcome() {
 main() {
     # Schritt 1: Begrüßung
     if ! show_welcome; then
-        exit 0  # Benutzer hat abgebrochen
+        # User hat abgebrochen - Autostart-Datei entfernen
+        rm -f "$HOME/.config/autostart/netlution-setup.desktop"
+        exit 0
     fi
     
     # Edge-Policies konfigurieren (im Hintergrund)
@@ -341,6 +388,7 @@ main() {
     
     # Wenn wir hier ankommen, wurde der Neustart übersprungen oder abgebrochen
     # Das sollte normalerweise nicht passieren, aber für Robustheit behandeln wir es
+    rm -f "$HOME/.config/autostart/netlution-setup.desktop"
     exit 0
 }
 

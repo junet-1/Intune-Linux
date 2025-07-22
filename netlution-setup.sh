@@ -37,6 +37,13 @@ EOF
 
 # Prüfe ob dies der erste Login ist
 FIRST_LOGIN_FLAG="$HOME/.config/netlution-ubuntu-sso-first-login"
+REBOOT_PHASE_FLAG="$HOME/.config/netlution-ubuntu-reboot-phase"
+
+# Wenn wir nach dem Reboot sind, springe zur zweiten Phase
+if [[ -f "$REBOOT_PHASE_FLAG" ]]; then
+    # Nach Reboot - führe restliche Setup-Schritte aus
+    exec "$0" --post-reboot
+fi
 
 if [[ -f "$FIRST_LOGIN_FLAG" ]]; then
     exit 0
@@ -81,6 +88,40 @@ setup_microsoft_edge() {
                 --window-icon="$HOME/.local/share/netlution/logo.png" \
                 --text="<span color='#27ae60'>✅ <b>Microsoft Edge wurde geöffnet!</b></span>\n\nBitte melde dich im Netlution SharePoint an.\nKomm danach zu diesem Dialog zurück und klicke 'Weiter'." \
                 --ok-label="Weiter"
+            
+            # Neustart nach Authentifizierung erforderlich
+            if zenity --question \
+                --title="🔄 System-Neustart erforderlich" \
+                --width=500 \
+                --window-icon="$HOME/.local/share/netlution/logo.png" \
+                --text="<span font='14' weight='bold' color='#e74c3c'>System-Neustart erforderlich</span>\n\nNach der Anmeldung muss das System einmal neu gestartet werden,\num die Authentifizierung vollständig zu aktivieren.\n\n<span color='#3498db'><b>Was passiert beim Neustart:</b></span>\n• Authentifizierungs-Token werden aktiviert\n• System-Richtlinien werden angewendet\n• Setup wird automatisch fortgesetzt\n\n<span color='#7f8c8d'><small>Das ist ein einmaliger Vorgang und dauert nur wenige Minuten.</small></span>" \
+                --ok-label="Jetzt neu starten" \
+                --cancel-label="Später neu starten"; then
+                
+                # Flag setzen für Post-Reboot Phase
+                touch "$REBOOT_PHASE_FLAG"
+                
+                # Neustart-Benachrichtigung
+                zenity --info \
+                    --title="🔄 Neustart wird eingeleitet" \
+                    --window-icon="$HOME/.local/share/netlution/logo.png" \
+                    --text="<span color='#e67e22'>⚠️ <b>System wird neu gestartet...</b></span>\n\nSpeichere alle offenen Arbeiten!\n\nDas Setup wird nach dem Neustart automatisch fortgesetzt." \
+                    --timeout=10 \
+                    --ok-label="OK"
+                
+                # Kurze Verzögerung und dann Neustart
+                sleep 3
+                sudo reboot
+            else
+                # Benutzer möchte später neu starten
+                touch "$REBOOT_PHASE_FLAG"
+                zenity --info \
+                    --title="🔄 Neustart später" \
+                    --window-icon="$HOME/.local/share/netlution/logo.png" \
+                    --text="<span color='#f39c12'>⏱️ <b>Neustart verschoben</b></span>\n\nBitte starte das System manuell neu, um die\nAuthentifizierung vollständig zu aktivieren.\n\nDas Setup wird nach dem Neustart automatisch fortgesetzt." \
+                    --ok-label="Verstanden"
+                exit 0
+            fi
         else
             zenity --warning \
                 --title="⚠️ Microsoft Edge" \
@@ -133,24 +174,65 @@ change_password() {
         --ok-label="Passwort ändern" \
         --cancel-label="Später"; then
         
-        # Versuche zuerst gnome-control-center
-        if command -v gnome-control-center >/dev/null 2>&1; then
-            gnome-control-center user-accounts >/dev/null 2>&1 &
+        # Frage zuerst nach der bevorzugten Methode
+        if zenity --question \
+            --title="🔐 Passwort-Änderung" \
+            --width=500 \
+            --window-icon="$HOME/.local/share/netlution/logo.png" \
+            --text="<span font='14' weight='bold' color='#1e3c72'>Wie möchtest du dein Passwort ändern?</span>\n\n<span color='#3498db'><b>Terminal (empfohlen):</b></span>\n• Schnell und direkt\n• Sichere Eingabe ohne Sichtbarkeit\n\n<span color='#3498db'><b>Systemeinstellungen:</b></span>\n• Grafische Benutzeroberfläche\n• Mehr Optionen verfügbar" \
+            --ok-label="🖥️ Terminal verwenden" \
+            --cancel-label="⚙️ Systemeinstellungen"; then
+            
+            # Terminal-basierte Passwort-Änderung (Benutzer-Wahl)
             zenity --info \
-                --title="🔐 Benutzerkonten" \
+                --title="🔐 Terminal Passwort-Änderung" \
                 --window-icon="$HOME/.local/share/netlution/logo.png" \
-                --text="<span color='#27ae60'>✅ <b>Benutzerkonten-Einstellungen geöffnet!</b></span>\n\nKlicke auf dein Benutzerkonto und dann auf 'Passwort ändern'.\nKomm danach zu diesem Dialog zurück." \
-                --ok-label="Weiter"
+                --text="<span color='#27ae60'>✅ <b>Terminal wird geöffnet!</b></span>\n\n<span color='#e74c3c'><b>Anleitung:</b></span>\n1. Gib dein <b>aktuelles</b> Passwort ein\n2. Gib dein <b>neues</b> Passwort zweimal ein\n3. Drücke Enter wenn fertig\n\n<span color='#7f8c8d'><small>💡 Tipp: Die Passwort-Eingabe wird nicht angezeigt (ist normal!)</small></span>" \
+                --ok-label="Terminal öffnen"
+            
+            gnome-terminal --title="Netlution Passwort ändern" -- bash -c "
+            echo '🔐 Netlution Passwort-Änderung'
+            echo '=================================='
+            echo 'Gib dein aktuelles Passwort ein, dann dein neues Passwort (zweimal).'
+            echo ''
+            passwd
+            echo ''
+            echo '✅ Passwort-Änderung abgeschlossen!'
+            echo 'Drücke Enter um das Terminal zu schließen...'
+            read
+            " &
         else
-            # Fallback: Terminal-basierte Passwort-Änderung
-            if zenity --question \
-                --title="🔐 Passwort ändern" \
-                --window-icon="$HOME/.local/share/netlution/logo.png" \
-                --text="Möchtest du dein Passwort jetzt über das Terminal ändern?\n\n<small>Das Terminal wird geöffnet und du kannst dein neues Passwort eingeben.</small>" \
-                --ok-label="Ja" \
-                --cancel-label="Später"; then
+            # Systemeinstellungen mit besserer Anleitung
+            if command -v gnome-control-center >/dev/null 2>&1; then
+                gnome-control-center user-accounts >/dev/null 2>&1 &
+                sleep 2
+                zenity --info \
+                    --title="⚙️ Systemeinstellungen" \
+                    --window-icon="$HOME/.local/share/netlution/logo.png" \
+                    --text="<span color='#27ae60'>✅ <b>Systemeinstellungen geöffnet!</b></span>\n\n<span color='#e74c3c'><b>So änderst du dein Passwort:</b></span>\n\n1. Klicke auf dein <b>Benutzerkonto</b> ($(whoami))\n2. Klicke auf <b>'Passwort'</b> oder <b>'Ändern'</b>\n3. Gib dein aktuelles und neues Passwort ein\n4. Bestätige mit <b>'Ändern'</b>\n\n<span color='#7f8c8d'><small>Falls du Probleme hast, schließe die Einstellungen und verwende stattdessen das Terminal.</small></span>" \
+                    --ok-label="Verstanden"
+            else
+                # Fallback falls gnome-control-center nicht verfügbar
+                zenity --warning \
+                    --title="⚠️ Systemeinstellungen" \
+                    --window-icon="$HOME/.local/share/netlution/logo.png" \
+                    --text="Systemeinstellungen nicht verfügbar.\nVerwende stattdessen das Terminal zur Passwort-Änderung?" \
+                    --ok-label="Terminal öffnen" \
+                    --cancel-label="Später"
                 
-                gnome-terminal -- bash -c "echo 'Passwort für $(whoami) ändern:'; passwd; echo 'Drücke Enter um fortzufahren...'; read" &
+                if [[ $? -eq 0 ]]; then
+                    gnome-terminal --title="Netlution Passwort ändern" -- bash -c "
+                    echo '🔐 Netlution Passwort-Änderung'
+                    echo '=================================='
+                    echo 'Gib dein aktuelles Passwort ein, dann dein neues Passwort (zweimal).'
+                    echo ''
+                    passwd
+                    echo ''
+                    echo '✅ Passwort-Änderung abgeschlossen!'
+                    echo 'Drücke Enter um das Terminal zu schließen...'
+                    read
+                    " &
+                fi
             fi
         fi
     fi
@@ -234,6 +316,16 @@ show_completion() {
     fi
 }
 
+show_post_reboot_welcome() {
+    zenity --info \
+        --title="🔄 Netlution Setup - Fortsetzung" \
+        --width=600 \
+        --height=300 \
+        --window-icon="$HOME/.local/share/netlution/logo.png" \
+        --text="<span font='16' weight='bold' color='#27ae60'>🔄 Willkommen zurück!</span>\n\n<span font='12' color='#1e3c72'><b>Netlution IT Solutions</b></span>\n\nDer Neustart war erfolgreich und deine Authentifizierung ist jetzt aktiv.\n\nWir setzen das Setup mit den verbleibenden Schritten fort:\n\n<span color='#3498db'>📱 Intune Geräteregistrierung</span>\n<span color='#3498db'>🔐 Passwort-Sicherheit</span>\n<span color='#3498db'>🖥️ Desktop-Konfiguration</span>\n\n<i>Das dauert nur noch wenige Minuten!</i>" \
+        --ok-label="Setup fortsetzen"
+}
+
 # Hauptprogramm - Schritt für Schritt
 main() {
     # Schritt 1: Begrüßung
@@ -244,24 +336,30 @@ main() {
     # Edge-Policies konfigurieren (im Hintergrund)
     setup_edge_policies
     
-    # Schritt 2: Microsoft Edge Setup
+    # Schritt 2: Microsoft Edge Setup (mit Neustart)
     setup_microsoft_edge
     
-    # Schritt 3: Intune Portal Setup
+    # Wenn wir hier ankommen, wurde der Neustart übersprungen oder abgebrochen
+    # Das sollte normalerweise nicht passieren, aber für Robustheit behandeln wir es
+    exit 0
+}
+
+# Post-Reboot Hauptprogramm
+main_post_reboot() {
+    # Begrüßung nach Neustart
+    if ! show_post_reboot_welcome; then
+        exit 0
+    fi
+    
+    # Verbleibende Setup-Schritte
     setup_intune_portal
-    
-    # Schritt 4: Passwort ändern
     change_password
-    
-    # Schritt 5: Desktop-Shortcuts
     create_desktop_shortcuts
-    
-    # Schritt 6: Abschluss
     show_completion
     
-    # Flag setzen - Setup als abgeschlossen markieren
-    mkdir -p "$(dirname "$FIRST_LOGIN_FLAG")"
+    # Flags bereinigen - Setup vollständig abgeschlossen
     touch "$FIRST_LOGIN_FLAG"
+    rm -f "$REBOOT_PHASE_FLAG"
     
     # Autostart-Datei entfernen (läuft nur einmal)
     rm -f "$HOME/.config/autostart/netlution-setup.desktop"
@@ -279,5 +377,9 @@ if [[ ! -f "$LOGO_PATH" ]]; then
     LOGO_PATH=""
 fi
 
-# Setup starten
-main
+# Prüfen ob wir nach einem Reboot sind
+if [[ "$1" == "--post-reboot" ]]; then
+    main_post_reboot
+else
+    main
+fi

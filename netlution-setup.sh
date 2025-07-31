@@ -34,54 +34,17 @@ EOF
     fi
 }
 
-# Desktop Shortcuts automatisch erstellen
-create_desktop_shortcuts() {
-    DESKTOP_DIR="$HOME/Desktop"
-    mkdir -p "$DESKTOP_DIR"
-    
-    # Netlution SharePoint Shortcut
-    cat > "$DESKTOP_DIR/Netlution-SharePoint.desktop" << 'EOF'
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Netlution SharePoint
-Comment=Zugang zu Netlution Dateien und Projekten
-Exec=microsoft-edge https://netlution365.sharepoint.com/
-Icon=folder-documents
-Terminal=false
-Categories=Network;FileManager;
-EOF
-    
-    # Intune Portal Shortcut (falls verfügbar)
-    if command -v intune-portal >/dev/null 2>&1; then
-        cat > "$DESKTOP_DIR/Netlution-Geraeteverwaltung.desktop" << 'EOF'
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Netlution Geräteverwaltung
-Comment=Intune Company Portal
-Exec=intune-portal
-Icon=intune-portal
-Terminal=false
-Categories=System;Settings;
-EOF
-    fi
-    
-    chmod +x "$DESKTOP_DIR"/*.desktop 2>/dev/null || true
-}
-
 # Einfaches Tutorial-Fenster
 show_tutorial() {
     zenity --info \
-        --title="🏢 Willkommen bei deinem Netlution Arbeitsplatz!" \
+        --title="Willkommen bei deinem Netlution Arbeitsplatz!" \
         --width=700 \
         --height=500 \
-        --text="<span font='18' weight='bold' color='#1e3c72'>Willkommen bei deinem neuen Netlution Arbeitsplatz!</span>
+        --text="<span font='18' weight='bold' color='#1e3c72'>Willkommen bei deinem neuen n_Arbeitsplatz!</span>
 
-<span font='14' weight='bold' color='#27ae60'>✅ Automatische Konfiguration abgeschlossen:</span>
+<span font='14' weight='bold' color='#27ae60'>Automatische Konfiguration abgeschlossen:</span>
 
 🌐 <b>Microsoft Edge</b> - Konfiguriert für Netlution SharePoint
-🖥️ <b>Desktop Shortcuts</b> - Schnellzugriff auf wichtige Tools
 ⚙️ <b>System-Einstellungen</b> - Optimiert für deine Arbeit
 
 <span font='14' weight='bold' color='#e74c3c'>📋 Nächste Schritte (manuell):</span>
@@ -89,13 +52,16 @@ show_tutorial() {
 <span color='#2c3e50'><b>1. Microsoft 365 Anmeldung:</b></span>
    • Öffne den <b>Netlution SharePoint</b> Shortcut
    • Melde dich mit deinen Netlution-Anmeldedaten an
+   
+<span color='#2c3e50'><b>2. Starte neu:</b></span>
+   • Starte kurz neu um die Entra Registrierung abzuschließen.
 
 <span color='#2c3e50'><b>2. Passwort ändern (empfohlen):</b></span>
    • Terminal öffnen und <b>passwd</b> eingeben
    • Oder über Systemeinstellungen → Benutzer
 
 <span color='#2c3e50'><b>3. Gerät registrieren:</b></span>
-   • Intune Portal öffnen (falls verfügbar)
+   • Intune Portal öffnen
    • Den Anweisungen zur Geräteregistrierung folgen
 
 <span font='12' color='#7f8c8d'>Bei Fragen: helpdesk@netlution.de</span>
@@ -108,7 +74,7 @@ show_tutorial() {
 show_quick_notification() {
     notify-send \
         "Netlution Setup" \
-        "🎉 Willkommen bei deinem Netlution Arbeitsplatz!\n\nSetup abgeschlossen - Tutorial wird geöffnet." \
+        "🎉 Willkommen bei deinem Netlution Arbeitsplatz!\n\nSetup abgeschlossen." \
         --icon=dialog-information \
         --app-name="Netlution IT" \
         --expire-time=3000
@@ -169,19 +135,12 @@ fix_permissions
 echo "   • Microsoft Edge konfigurieren..."
 setup_edge_policies
 
-# 3. Desktop Shortcuts erstellen
-echo "   • Desktop Shortcuts erstellen..."
-create_desktop_shortcuts
-
-# 4. Autostart-Datei entfernen (falls vorhanden)
 rm -f "$HOME/.config/autostart/netlution-setup.desktop"
 
-# 5. Setup als abgeschlossen markieren
 touch "$SETUP_FLAG"
 
 echo "✅ Automatische Konfiguration abgeschlossen!"
 
-# Tutorial anzeigen (falls GUI verfügbar)
 if [[ "$NOGUI" != "true" ]]; then
     # Kurz warten bis alles bereit ist
     sleep 2

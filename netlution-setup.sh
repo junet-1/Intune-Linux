@@ -90,15 +90,12 @@ show_tutorial() {
    • Öffne den <b>Netlution SharePoint</b> Shortcut
    • Melde dich mit deinen Netlution-Anmeldedaten an
 
-<span color='#2c3e50'><b>2. Gerät neustarten:</b></span>
-   • Starte kurz neu um eine saubere Inetragion zu haben</b> Shortcut
-
-<span color='#2c3e50'><b>3. Passwort ändern:</b></span>
+<span color='#2c3e50'><b>2. Passwort ändern (empfohlen):</b></span>
    • Terminal öffnen und <b>passwd</b> eingeben
    • Oder über Systemeinstellungen → Benutzer
 
-<span color='#2c3e50'><b>4. Gerät registrieren:</b></span>
-   • Intune Portal öffnen
+<span color='#2c3e50'><b>3. Gerät registrieren:</b></span>
+   • Intune Portal öffnen (falls verfügbar)
    • Den Anweisungen zur Geräteregistrierung folgen
 
 <span font='12' color='#7f8c8d'>Bei Fragen: helpdesk@netlution.de</span>
@@ -111,7 +108,7 @@ show_tutorial() {
 show_quick_notification() {
     notify-send \
         "Netlution Setup" \
-        "🎉 Willkommen bei deinem n_Arbeitsplatz!\n\nSetup abgeschlossen!" \
+        "🎉 Willkommen bei deinem Netlution Arbeitsplatz!\n\nSetup abgeschlossen - Tutorial wird geöffnet." \
         --icon=dialog-information \
         --app-name="Netlution IT" \
         --expire-time=3000
@@ -120,14 +117,37 @@ show_quick_notification() {
 # Flag für einmalige Ausführung
 SETUP_FLAG="$HOME/.config/netlution-ubuntu-setup-done"
 
+# Parameter prüfen
+if [[ "$1" == "--reset" ]]; then
+    echo "🔄 Setup wird zurückgesetzt..."
+    rm -f "$SETUP_FLAG"
+    rm -f "$HOME/.config/autostart/netlution-setup.desktop"
+    echo "✅ Setup zurückgesetzt. Führe das Skript erneut aus."
+    exit 0
+elif [[ "$1" == "--help" ]]; then
+    echo "Netlution Ubuntu Setup"
+    echo "====================="
+    echo ""
+    echo "Verwendung:"
+    echo "  $0                 - Setup ausführen"
+    echo "  $0 --show-tutorial - Nur Tutorial anzeigen"
+    echo "  $0 --reset         - Setup zurücksetzen"
+    echo "  $0 --help          - Diese Hilfe anzeigen"
+    exit 0
+fi
+
 # Prüfen ob Setup bereits ausgeführt wurde
 if [[ -f "$SETUP_FLAG" ]]; then
     # Setup bereits ausgeführt - nur Tutorial zeigen falls gewünscht
-    if [[ "$1" == "--show-tutorial" ]] || [[ "$1" == "--help" ]]; then
+    if [[ "$1" == "--show-tutorial" ]]; then
         show_tutorial
     else
-        echo "Netlution Setup bereits abgeschlossen."
-        echo "Verwende --show-tutorial um das Tutorial erneut anzuzeigen."
+        echo "✅ Netlution Setup bereits abgeschlossen."
+        echo ""
+        echo "Verfügbare Optionen:"
+        echo "  $0 --show-tutorial  - Tutorial erneut anzeigen"
+        echo "  $0 --reset          - Setup zurücksetzen und neu ausführen"
+        echo "  $0 --help           - Hilfe anzeigen"
     fi
     exit 0
 fi

@@ -80,8 +80,8 @@ autoinstall:
     
     # Netlution Setup - automatischer Start beim ersten Login
     - curtin in-target -- mkdir -p /etc/skel/.config/autostart
-    - curtin in-target -- wget -O /etc/skel/netlution-setup.sh https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.sh || true
-    - curtin in-target -- wget -O /etc/skel/.config/autostart/netlution-setup.desktop https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop || true
+    - curtin in-target -- wget -O /etc/skel/netlution-setup.sh https://netintuneautomation.blob.core.windows.net/$web/netlution-setup.sh || true
+    - curtin in-target -- wget -O /etc/skel/.config/autostart/netlution-setup.desktop https://netintuneautomation.blob.core.windows.net/$web/netlution-setup.desktop || true
     - curtin in-target -- chmod +x /etc/skel/netlution-setup.sh
     
     # Server-Pakete entfernen

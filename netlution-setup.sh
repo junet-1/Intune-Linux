@@ -58,6 +58,8 @@ setup_wallpaper() {
         gsettings set org.gnome.desktop.background picture-options 'stretched' 2>/dev/null || true
         gsettings set org.gnome.desktop.interface accent-color 'blue' 2>/dev/null || true
         gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita' 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface icon-theme 'Adwaita' 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-light' 2>/dev/null || true
         return 0
     else
         return 1
@@ -97,13 +99,12 @@ show_tutorial() {
 
 <span color='#2c3e50'><b>4. Gerät registrieren:</b></span>
    • Intune Portal öffnen
-   • Mit Deinem Microsoft User Anmelden
    • Den Anweisungen zur Geräteregistrierung folgen
 
 <span font='12' color='#7f8c8d'>Bei Fragen: helpdesk@netlution.de</span>
 
 <span font='10' color='#95a5a6'>Dein System ist jetzt einsatzbereit! 🎉</span>" \
-        --ok-label="Tutorial schließen"
+        --ok-label="Schließen"
 }
 
 SETUP_FLAG="$HOME/.config/netlution-ubuntu-setup-done"

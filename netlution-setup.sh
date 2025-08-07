@@ -56,6 +56,8 @@ setup_wallpaper() {
         gsettings set org.gnome.desktop.background picture-uri "file://$wallpaper_file" 2>/dev/null || true
         gsettings set org.gnome.desktop.background picture-uri-dark "file://$wallpaper_file" 2>/dev/null || true
         gsettings set org.gnome.desktop.background picture-options 'stretched' 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface accent-color 'blue' 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita' 2>/dev/null || true
         return 0
     else
         return 1

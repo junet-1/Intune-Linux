@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# Netlution Ubuntu Setup - Vereinfachte Tutorial-Version
-# Macht die wichtigsten Einstellungen automatisch und zeigt ein einfaches Tutorial
-
-# Permission-Fix für .local Verzeichnisse
 fix_permissions() {
     mkdir -p "$HOME/.local/share" "$HOME/.local/state" "$HOME/.cache" "$HOME/.config"
     chmod 755 "$HOME" "$HOME/.local" "$HOME/.local/share" "$HOME/.local/state" "$HOME/.cache" "$HOME/.config" 2>/dev/null || true
@@ -14,7 +10,6 @@ fix_permissions() {
     export XDG_STATE_HOME="$HOME/.local/state"
 }
 
-# Edge Policies automatisch setzen
 setup_edge_policies() {
     if [[ -d /etc/opt/microsoft/msedge ]] || command -v microsoft-edge >/dev/null 2>&1; then
         sudo mkdir -p /etc/opt/microsoft/msedge/policies/managed 2>/dev/null || true
@@ -34,7 +29,45 @@ EOF
     fi
 }
 
-# Einfaches Tutorial-Fenster
+setup_wallpaper() {
+    local wallpaper_url="https://netintuneautomation.blob.core.windows.net/\$web/wallpaper.jpg"
+    local wallpaper_dir="$HOME/.local/share/backgrounds"
+    local wallpaper_file="$wallpaper_dir/netlution-wallpaper.jpg"
+    
+    mkdir -p "$wallpaper_dir"
+    
+    if command -v wget >/dev/null 2>&1; then
+        wget -q "$wallpaper_url" -O "$wallpaper_file" 2>/dev/null || {
+            return 1
+        }
+    elif command -v curl >/dev/null 2>&1; then
+        curl -s "$wallpaper_url" -o "$wallpaper_file" 2>/dev/null || {
+            return 1
+        }
+    else
+        return 1
+    fi
+    
+    if [[ ! -f "$wallpaper_file" ]] || [[ ! -s "$wallpaper_file" ]]; then
+        return 1
+    fi
+    
+    if command -v gsettings >/dev/null 2>&1; then
+        gsettings set org.gnome.desktop.background picture-uri "file://$wallpaper_file" 2>/dev/null || true
+        gsettings set org.gnome.desktop.background picture-uri-dark "file://$wallpaper_file" 2>/dev/null || true
+        gsettings set org.gnome.desktop.background picture-options 'scaled' 2>/dev/null || true
+        return 0
+    else
+        return 1
+    fi
+}
+
+show_quick_notification() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send "Netlution Setup" "Konfiguration abgeschlossen! Tutorial wird geöffnet..." --icon=info
+    fi
+}
+
 show_tutorial() {
     zenity --info \
         --title="Willkommen bei deinem Netlution Arbeitsplatz!" \
@@ -45,22 +78,23 @@ show_tutorial() {
 <span font='14' weight='bold' color='#27ae60'>Automatische Konfiguration abgeschlossen:</span>
 
 🌐 <b>Microsoft Edge</b> - Konfiguriert für Netlution SharePoint
+🖼️ <b>Desktop Wallpaper</b> - Netlution Hintergrund gesetzt
 ⚙️ <b>System-Einstellungen</b> - Optimiert für deine Arbeit
 
 <span font='14' weight='bold' color='#e74c3c'>📋 Nächste Schritte (manuell):</span>
 
 <span color='#2c3e50'><b>1. Microsoft 365 Anmeldung:</b></span>
-   • Öffne den <b>Netlution SharePoint</b> Shortcut
+   • Öffne https://netlution365.sharepoint.com/
    • Melde dich mit deinen Netlution-Anmeldedaten an
    
 <span color='#2c3e50'><b>2. Starte neu:</b></span>
    • Starte kurz neu um die Entra Registrierung abzuschließen.
 
-<span color='#2c3e50'><b>2. Passwort ändern (empfohlen):</b></span>
+<span color='#2c3e50'><b>3. Passwort ändern (empfohlen):</b></span>
    • Terminal öffnen und <b>passwd</b> eingeben
    • Oder über Systemeinstellungen → Benutzer
 
-<span color='#2c3e50'><b>3. Gerät registrieren:</b></span>
+<span color='#2c3e50'><b>4. Gerät registrieren:</b></span>
    • Intune Portal öffnen
    • Den Anweisungen zur Geräteregistrierung folgen
 
@@ -70,108 +104,37 @@ show_tutorial() {
         --ok-label="Tutorial schließen"
 }
 
-# Quick-Start Benachrichtigung
-show_quick_notification() {
-    notify-send \
-        "Netlution Setup" \
-        "🎉 Willkommen bei deinem Netlution Arbeitsplatz!\n\nSetup abgeschlossen." \
-        --icon=dialog-information \
-        --app-name="Netlution IT" \
-        --expire-time=3000
-}
-
-# Flag für einmalige Ausführung
 SETUP_FLAG="$HOME/.config/netlution-ubuntu-setup-done"
 
-# Parameter prüfen
 if [[ "$1" == "--reset" ]]; then
-    echo "🔄 Setup wird zurückgesetzt..."
     rm -f "$SETUP_FLAG"
     rm -f "$HOME/.config/autostart/netlution-setup.desktop"
-    echo "✅ Setup zurückgesetzt. Führe das Skript erneut aus."
     exit 0
 elif [[ "$1" == "--help" ]]; then
-    echo "Netlution Ubuntu Setup"
-    echo "====================="
-    echo ""
-    echo "Verwendung:"
-    echo "  $0                 - Setup ausführen"
-    echo "  $0 --show-tutorial - Nur Tutorial anzeigen"
-    echo "  $0 --reset         - Setup zurücksetzen"
-    echo "  $0 --help          - Diese Hilfe anzeigen"
     exit 0
 fi
 
-# Prüfen ob Setup bereits ausgeführt wurde
 if [[ -f "$SETUP_FLAG" ]]; then
-    # Setup bereits ausgeführt - nur Tutorial zeigen falls gewünscht
     if [[ "$1" == "--show-tutorial" ]]; then
         show_tutorial
-    else
-        echo "✅ Netlution Setup bereits abgeschlossen."
-        echo ""
-        echo "Verfügbare Optionen:"
-        echo "  $0 --show-tutorial  - Tutorial erneut anzeigen"
-        echo "  $0 --reset          - Setup zurücksetzen und neu ausführen"
-        echo "  $0 --help           - Hilfe anzeigen"
     fi
     exit 0
 fi
 
-# Prüfen ob zenity verfügbar ist
 if ! command -v zenity >/dev/null 2>&1; then
-    echo "Warnung: zenity nicht verfügbar - Setup läuft ohne GUI"
     NOGUI=true
 fi
 
-# Automatische Konfiguration durchführen
-echo "🔧 Netlution Ubuntu Setup wird ausgeführt..."
-
-# 1. Permissions korrigieren
-echo "   • Berechtigungen korrigieren..."
 fix_permissions
-
-# 2. Edge Policies setzen
-echo "   • Microsoft Edge konfigurieren..."
 setup_edge_policies
+setup_wallpaper
 
 rm -f "$HOME/.config/autostart/netlution-setup.desktop"
-
 touch "$SETUP_FLAG"
 
-echo "✅ Automatische Konfiguration abgeschlossen!"
-
 if [[ "$NOGUI" != "true" ]]; then
-    # Kurz warten bis alles bereit ist
     sleep 2
-    
-    # Benachrichtigung senden
     show_quick_notification
-    
-    # Kurze Pause dann Tutorial
     sleep 3
     show_tutorial
-else
-    # Fallback für Non-GUI Umgebungen
-    echo ""
-    echo "🏢 Willkommen bei deinem Netlution Arbeitsplatz!"
-    echo "================================================"
-    echo ""
-    echo "✅ Automatische Konfiguration abgeschlossen:"
-    echo "   • Microsoft Edge konfiguriert"
-    echo "   • Desktop Shortcuts erstellt"
-    echo "   • System-Einstellungen optimiert"
-    echo ""
-    echo "📋 Nächste Schritte:"
-    echo "   1. Microsoft Edge öffnen → https://netlution365.sharepoint.com/"
-    echo "   2. Mit Netlution-Anmeldedaten anmelden"
-    echo "   3. Passwort ändern: passwd"
-    echo "   4. Gerät registrieren (Intune Portal)"
-    echo ""
-    echo "Bei Fragen: helpdesk@netlution.de"
-    echo ""
-    echo "Dein System ist jetzt einsatzbereit! 🎉"
 fi
-
-echo ""
-echo "Netlution Setup abgeschlossen. Verwende '$0 --show-tutorial' um das Tutorial erneut anzuzeigen."

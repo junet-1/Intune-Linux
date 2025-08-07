@@ -80,7 +80,6 @@ show_tutorial() {
 <span font='14' weight='bold' color='#27ae60'>Automatische Konfiguration abgeschlossen:</span>
 
 🌐 <b>Microsoft Edge</b> - Konfiguriert für Netlution SharePoint
-🖼️ <b>Desktop Wallpaper</b> - Netlution Hintergrund gesetzt
 ⚙️ <b>System-Einstellungen</b> - Optimiert für deine Arbeit
 
 <span font='14' weight='bold' color='#e74c3c'>📋 Nächste Schritte (manuell):</span>
@@ -98,6 +97,7 @@ show_tutorial() {
 
 <span color='#2c3e50'><b>4. Gerät registrieren:</b></span>
    • Intune Portal öffnen
+   • Mit Deinem Microsoft User Anmelden
    • Den Anweisungen zur Geräteregistrierung folgen
 
 <span font='12' color='#7f8c8d'>Bei Fragen: helpdesk@netlution.de</span>

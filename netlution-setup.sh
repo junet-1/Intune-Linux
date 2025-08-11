@@ -30,7 +30,7 @@ EOF
 }
 
 setup_wallpaper() {
-    local wallpaper_url="https://netintuneautomation.blob.core.windows.net/\$web/wallpaper.jpg"
+    local wallpaper_url="https://netintuneautomation.blob.core.windows.net/web/wallpaper.jpg"
     local wallpaper_dir="$HOME/.local/share/backgrounds"
     local wallpaper_file="$wallpaper_dir/netlution-wallpaper.jpg"
     

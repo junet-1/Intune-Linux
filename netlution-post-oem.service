@@ -1,0 +1,15 @@
+[Unit]
+Description=Netlution Post-OEM Setup
+After=oem-config.service
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=!/var/lib/netlution-setup-completed
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/netlution-post-oem.sh
+RemainAfterExit=yes
+User=root
+
+[Install]
+WantedBy=multi-user.target

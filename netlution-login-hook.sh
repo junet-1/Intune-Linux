@@ -2,7 +2,7 @@
 # Nur beim ersten grafischen Login und wenn Setup noch nicht gemacht wurde
 if [ -n "$DISPLAY" ] && [ "$USER" != "root" ] && [ ! -f "$HOME/.netlution-setup-done" ]; then
   # Netlution Files herunterladen
-  wget -O "$HOME/netlution-setup.sh" "https://raw.githubusercontent.com/DEIN-REPO/BRANCH/netlution-setup.sh" 2>/dev/null
+  wget -O "$HOME/netlution-setup.sh" "https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.sh" 2>/dev/null
   if [ $? -eq 0 ]; then
     mkdir -p "$HOME/.config/autostart"
     wget -O "$HOME/.config/autostart/netlution-setup.desktop" "https://raw.githubusercontent.com/junet-1/Intune-Linux/refs/heads/main/netlution-setup.desktop" 2>/dev/null
@@ -13,3 +13,4 @@ if [ -n "$DISPLAY" ] && [ "$USER" != "root" ] && [ ! -f "$HOME/.netlution-setup-
   fi
 
 fi
+

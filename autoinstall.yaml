@@ -78,11 +78,12 @@ autoinstall:
     - curtin in-target -- apt-get install -y microsoft-edge-stable || true
     - curtin in-target -- apt-get install -y intune-portal || true
     
-    # Netlution Setup - automatischer Start beim ersten Login
-    - curtin in-target -- mkdir -p /etc/skel/.config/autostart
-    - curtin in-target -- wget -O /etc/skel/netlution-setup.sh https://netintuneautomation.blob.core.windows.net/$web/netlution-setup.sh || true
-    - curtin in-target -- wget -O /etc/skel/.config/autostart/netlution-setup.desktop https://netintuneautomation.blob.core.windows.net/$web/netlution-setup.desktop || true
-    - curtin in-target -- chmod +x /etc/skel/netlution-setup.sh
+    # Netlution Setup - system-wide autostart for all users
+    - curtin in-target -- mkdir -p /etc/xdg/autostart
+    - curtin in-target -- mkdir -p /usr/local/bin
+    - curtin in-target -- wget -O /usr/local/bin/netlution-setup.sh https://netintuneautomation.blob.core.windows.net/$web/netlution-setup.sh || true
+    - curtin in-target -- wget -O /etc/xdg/autostart/netlution-setup.desktop https://netintuneautomation.blob.core.windows.net/$web/netlution-setup.desktop || true
+    - curtin in-target -- chmod +x /usr/local/bin/netlution-setup.sh
     
     # Server-Pakete entfernen
     - >-
